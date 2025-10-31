@@ -1,0 +1,25 @@
+{
+  "cam_url": "https://www.hsb-wr.de/out/pictures/webcam/BRO/CAM-PIC-BRO.jpg",
+  "username": "",
+  "password": "root",
+  "auth_type": "none",
+  "save_path": "./data",
+  "interval_seconds": 30,
+  "active_start": "06:00",
+  "active_end": "22:02",
+  "active_days": [
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat"
+  ],
+  "use_astral": false,
+  "city_lat": 52.166076,
+  "city_lon": 10.539894,
+  "city_tz": "Europe/Berlin",
+  "log_file": null,
+  "log_enabled": true,
+  "language": "en"
+}

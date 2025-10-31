@@ -1,0 +1,186 @@
+﻿{% extends "base.html" %}
+{% block title %}{{ tr['dashboard_title'] if tr else 'Dashboard' }} - {{ tr['app_name'] if tr else 'ChronoCam' }}{% endblock %}
+{% block content %}
+
+<h2><i class="fa-solid fa-camera me-2"></i>{{ tr["dashboard_title"] if tr else "Dashboard" }}</h2>
+<hr class="mx-auto">
+
+  <!-- Statusanzeige -->
+  <div id="status-container" class="my-3">
+    <p id="status-text" class="lead m-0">{{ tr["status_starting"] if tr else "Starting monitoring ..." }}</p>
+    <p id="cam-error" class="text-danger mt-2" style="display:none;"></p>
+  </div>
+
+  <!-- Bildanzeige -->
+  <div class="text-center mt-3 mb-3">
+    <div class="image-frame">
+      <img id="latest-img" src="{{ url_for('static', path='img/last.jpg') }}?t={{ cache_buster }}" alt="{{ tr['last_image_alt'] if tr else 'Last image' }}"
+        class="img-fluid rounded shadow-sm" style="max-height: 500px;" onerror="this.closest('.image-frame').style.display='none';">
+    </div>
+    <p id="last-time" class=" mt-2" style="display:none;">2223</p>
+  </div>
+
+<!-- Steuerung -->
+<div class="d-flex justify-content-center mb-3 gap-3">
+  <button id="btn-pause" class="btn btn-warning">{{ tr["pause"] if tr else "Pause" }}</button>
+  <button id="btn-resume" class="btn btn-success">{{ tr["resume"] if tr else "Resume" }}</button>
+  <button id="btn-snapshot" class="btn btn-primary">{{ tr["snapshot"] if tr else "Snapshot" }}</button>
+</div>
+
+<!-- Infos: 3 Spalten ({{ tr["time"] if tr else "Time" }}/Bilder | Start/Ende | {{ tr["sunrise"] if tr else "Sunrise" }}/-untergang) -->
+<div class="row justify-content-center mb-3">
+  <div class="col-md-10">
+    <div class="card shadow-sm p-3">
+      <div class="row text-center align-items-center">
+        <!-- Spalte 1: {{ tr["time"] if tr else "Time" }} & {{ tr["saved_images"] if tr else "Saved Images" }} -->
+        <div class="col-12 col-md-4 mb-3 mb-md-0">
+          <div class="fw-bold"><i class="fa-solid fa-clock me-1"></i>{{ tr["time"] if tr else "Time" }}</div>
+          <div id="time">--:--</div>
+          <div class="fw-bold mt-3"><i class="fa-solid fa-images me-1"></i>{{ tr["saved_images"] if tr else "Saved Images" }}</div>
+          <div id="count">0</div>
+        </div>
+
+        <!-- Spalte 2: Start-/{{ tr["end_time"] if tr else "End Time" }} -->
+        <div class="col-12 col-md-4 mb-3 mb-md-0">
+          <div class="fw-bold"><i class="fa-solid fa-play me-1"></i>{{ tr["start_time"] if tr else "Start Time" }}</div>
+          <div id="start-time">{{ cfg.active_start }}</div>
+          <div class="fw-bold mt-3"><i class="fa-solid fa-stop me-1"></i>{{ tr["end_time"] if tr else "End Time" }}</div>
+          <div id="end-time">{{ cfg.active_end }}</div>
+        </div>
+
+        <!-- Spalte 3: {{ tr["sunrise"] if tr else "Sunrise" }} & {{ tr["sunset"] if tr else "Sunset" }} -->
+        <div class="col-12 col-md-4">
+          <div class="fw-bold"><i class="fa-solid fa-sun me-1"></i>{{ tr["sunrise"] if tr else "Sunrise" }}</div>
+          <div id="sunrise">--:--</div>
+          <div class="fw-bold mt-3"><i class="fa-solid fa-moon me-1"></i>{{ tr["sunset"] if tr else "Sunset" }}</div>
+          <div id="sunset">--:--</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+  const es = new EventSource('/events');
+  const latestImg = document.getElementById('latest-img');
+  const lastTime = document.getElementById('last-time');
+  const camErr = document.getElementById('cam-error');
+  const statusIcon = document.getElementById('status-icon');
+  const statusText = document.getElementById('status-text');
+  const timeEl = document.getElementById('time');
+  const sunriseEl = document.getElementById('sunrise');
+  const sunsetEl = document.getElementById('sunset');
+  const countEl = document.getElementById('count');
+  let imageCount = 0;
+  let statusRevertTimer = null;
+
+  // Localized UI strings injected by Jinja
+  const LAST_IMAGE_LABEL = {{ (tr['last_image_label'] if tr else 'Last image') | tojson }};
+  const CAMERA_ERROR_PREFIX = {{ (tr['camera_error_prefix'] if tr else 'Camera error') | tojson }};
+
+  function scheduleStatusRevert(ms = 5000) {
+    if (statusRevertTimer) clearTimeout(statusRevertTimer);
+    statusRevertTimer = setTimeout(() => {
+      fetchStatus();
+    }, ms);
+  }
+
+  function bust(u) { return u + (u.includes('?') ? '&' : '?') + 't=' + Date.now(); }
+
+  // {{ tr["time"] if tr else "Time" }} lokal anzeigen (nur Stunden:Minuten)
+  setInterval(() => {
+    const now = new Date();
+    timeEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }, 1000);
+
+
+  // Initialstatus vom Server laden
+  async function fetchStatus() {
+    try {
+      const res = await fetch('/status');
+      const d = await res.json();
+      sunriseEl.textContent = d.sunrise || '--:--';
+      sunsetEl.textContent = d.sunset || '--:--';
+      imageCount = d.count || 0;
+      countEl.textContent = imageCount;
+      if (d.paused === true) {
+        statusText.textContent = {{ (tr['paused'] if tr else 'Recording paused') | tojson }};
+      } else if (d.active === true) {
+        statusText.textContent = {{ (tr['running'] if tr else 'Recording running') | tojson }};
+      } else {
+        statusText.textContent = {{ (tr['waiting_window'] if tr else 'Waiting for active time window') | tojson }};
+      }
+    } catch (err) {
+      console.warn("Status konnte nicht geladen werden", err);
+    }
+  }
+  fetchStatus();
+
+  // SSE-Handler
+  es.onmessage = e => {
+    try {
+      const d = JSON.parse(e.data);
+
+      // Neues Bild empfangen
+      if (d.type === 'snapshot' && d.filename) {
+        imageCount++;
+        countEl.textContent = imageCount;
+        latestImg.src = bust('/static/img/last.jpg');
+        latestImg.style.display = '';
+        lastTime.textContent = LAST_IMAGE_LABEL + ": " + (d.timestamp || "--:--:--");
+        lastTime.style.display = '';
+        if (statusIcon) statusIcon.textContent = '';
+        statusText.textContent = {{ (tr['last_image_success'] if tr else 'Last image captured successfully') | tojson }};
+        scheduleStatusRevert(5000);
+      }
+
+      // Statusänderungen
+      if (d.type === 'status') {
+        if (d.status === 'paused') {
+          if (statusIcon) statusIcon.textContent = '';
+          statusText.textContent = {{ (tr['paused'] if tr else 'Recording paused') | tojson }};
+        } else if (d.status === 'running') {
+          if (statusIcon) statusIcon.textContent = '';
+          statusText.textContent = {{ (tr['running'] if tr else 'Recording running') | tojson }};
+        } else if (d.status === 'config_reloaded') {
+          if (statusIcon) statusIcon.textContent = '';
+          statusText.textContent = {{ (tr['config_reloaded'] if tr else 'Configuration reloaded') | tojson }};
+        }
+        scheduleStatusRevert(5000);
+      }
+
+      // Kamera-Fehler
+      if (d.type === 'camera_error') {
+        camErr.textContent = CAMERA_ERROR_PREFIX + ': ' + (d.message || '');
+        camErr.style.display = 'block';
+        if (statusIcon) statusIcon.textContent = '';
+        statusText.textContent = {{ (tr['camera_error'] if tr else 'Camera access error') | tojson }};
+        setTimeout(() => camErr.style.display = 'none', 8000);
+        scheduleStatusRevert(8000);
+      }
+
+    } catch (err) {
+      console.warn('SSE parse error', e.data);
+    }
+  };
+
+  // Fallback: alle 30 Sekunden Bild aktualisieren, falls kein SSE kam
+  setInterval(() => {
+    latestImg.src = bust('/static/img/last.jpg');
+  }, 30000);
+
+  // Buttons
+  document.getElementById('btn-pause').onclick = () => {
+    fetch('/action/pause', { method: 'POST' });
+  };
+  document.getElementById('btn-resume').onclick = () => {
+    fetch('/action/resume', { method: 'POST' });
+  };
+  document.getElementById('btn-snapshot').onclick = () => {
+    fetch('/action/snapshot', { method: 'POST' });
+  };
+</script>
+
+{% endblock %}
+

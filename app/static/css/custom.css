@@ -1,0 +1,51 @@
+body[data-theme="dark"] {
+  background-color: #1f1f1f;
+  color: #eaeaea;
+}
+.card {
+  background-color: #1e1e1e;
+  color: #eaeaea;
+}
+
+/* Dark mode form controls */
+body[data-theme="dark"] :is(.form-control, .form-select, textarea.form-control) {
+  background-color: #242424;
+  color: #eaeaea;
+  border-color: #444;
+}
+
+body[data-theme="dark"] :is(.form-control, textarea.form-control)::placeholder {
+  color: #aaaaaa;
+}
+
+body[data-theme="dark"] :is(.form-control, .form-select, textarea.form-control):focus {
+  background-color: #242221;
+  color: #ffffff;
+  border-color: #46433f;
+  box-shadow: 0 0 0 .2rem rgba(108, 117, 125, .25);
+}
+
+/* Switches and checkboxes */
+body[data-theme="dark"] .form-check-input {
+  background-color: #303030;
+  border-color: #555;
+}
+
+body[data-theme="dark"] .form-check-input:focus {
+  box-shadow: 0 0 0 .2rem rgba(108, 117, 125, .25);
+  border-color: #6c757d;
+}
+
+body[data-theme="dark"] .form-check-input:checked {
+  background-color: #0d6efd; /* Bootstrap primary */
+  border-color: #0d6efd;
+}
+
+/* Image frame with gray background and 2em padding */
+.image-frame {
+  display: inline-block;
+  background-color: #121111;
+  border: none;
+  border-radius: 0.3rem;
+  padding: 2em;
+}
