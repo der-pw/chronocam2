@@ -1,6 +1,6 @@
 # ChronoCam2
 
-A concise, GitHub-ready scaffold for the ChronoCam2 project. This adds repository hygiene (README, license, .gitignore) and optional CI. Update the placeholders below to match your app.
+A Docker-ready, simple web app for scheduling and recording webcams for snapshots or time-lapse recordings.
 
 ## Overview
 ChronoCam2 is a tool for automatically capturing images from a webcam at regular intervals. Users can define the recording schedule — including specific days, time ranges, or daylight-only operation — making it ideal for outdoor time-lapse documentation, such as construction site monitoring. Its primary purpose is to simplify long-term visual tracking by automating image capture and organization.
@@ -47,6 +47,49 @@ ChronoCam2 is a tool for automatically capturing images from a webcam at regular
   - `use_astral`: bool; restrict by sunrise/sunset
   - `city_lat` / `city_lon` / `city_tz`: location settings
   - `language`: `de` or `en` (templates/i18n)
+
+
+## Docker Compose
+
+Use Docker Compose to run ChronoCam2 with persistent storage.
+
+Basic File `docker-compose.yml`:
+
+```yaml
+services:
+  chronocam2:
+    container_name: chronocam2
+    image: derpw/chronocam2:latest
+
+    restart: unless-stopped
+
+    ports:
+      - "8001:8000"
+
+    volumes:
+      - ./data:/data
+    environment:
+      TZ: "Europe/Berlin"
+
+    user: "1000:1000"
+```
+
+Notes:
+- `8001:8000` maps the container's web UI to host port 8001.
+- `./data:/data` persists captured images/config outside the container.
+- Adjust `TZ` to your timezone and `user` to the correct UID:GID.
+
+### Linux Quick Start (Docker Compose)
+
+- Create project folder and enter it:
+  - `mkdir -p chronocam2 && cd chronocam2`
+- Create `docker-compose.yml` in this folder with the content above.
+- Create data folder and set ownership (adjust UID:GID as needed):
+  - `mkdir -p data`
+  - `sudo chown 1000:1000 data`
+- Pull images: `docker compose pull`
+- Start in background: `docker compose up -d`
+- Open the UI: `http://<your-dockerhost>:8001`
 
 
 ## License
