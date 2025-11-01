@@ -42,6 +42,7 @@ ENV/
 data/
 app/config.local.json
 *.bak
+app/downloads/*
 
 # macOS
 .DS_Store

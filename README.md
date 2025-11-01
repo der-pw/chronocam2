@@ -11,6 +11,11 @@ ChronoCam2 is a tool for automatically capturing images from a webcam at regular
 
 ## Quickstart
 - Prerequisites: Python 3.10+
+- Download project
+  ```
+  git clone https://github.com/der-pw/chronocam2.git
+  cd chronocam2
+  ```
 - Create a virtual environment
   - Windows PowerShell: `py -3 -m venv .venv && .venv\\Scripts\\Activate.ps1`
   - macOS/Linux: `python3 -m venv .venv && source .venv/bin/activate`
@@ -23,6 +28,7 @@ ChronoCam2 is a tool for automatically capturing images from a webcam at regular
 
 ### Endpoints
 - `GET /` — Dashboard (templates + static)
+
 - `GET /events` — Server-Sent Events for live updates
 - `GET /status` — JSON status for UI
 - `POST /update` — Save settings (form submit)
