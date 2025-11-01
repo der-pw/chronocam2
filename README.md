@@ -1,8 +1,6 @@
 # ChronoCam2
 ![image](./app/static/img/last.jpg)
 
-A Docker-ready, simple web app for scheduling and recording webcams for snapshots or time-lapse recordings.
-
 ## Table of Contents
 - [Overview](#overview)
 - [Project Layout](#project-layout)
