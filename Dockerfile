@@ -20,16 +20,10 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application source
 COPY app ./app
 
-<<<<<<< HEAD
 # Create a non-root user and fix ownership of relevant directories
 RUN adduser -D appuser \
     && chown -R appuser:appuser /app
 
-=======
-# Create a non-root user to run the application and ensure writable app directory
-RUN adduser -D appuser \
-    && chown -R appuser:appuser /app
->>>>>>> 11de5cbed9c9389491fe4e2a9a5b87bf5808c945
 USER appuser
 
 EXPOSE 8000
