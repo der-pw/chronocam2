@@ -3,7 +3,7 @@
 A concise, GitHub-ready scaffold for the ChronoCam2 project. This adds repository hygiene (README, license, .gitignore) and optional CI. Update the placeholders below to match your app.
 
 ## Overview
-Describe what ChronoCam2 does in 2–3 sentences. Include its primary purpose and the core problem it solves.
+ChronoCam2 is a tool for automatically capturing images from a webcam at regular intervals. Users can define the recording schedule — including specific days, time ranges, or daylight-only operation — making it ideal for outdoor time-lapse documentation, such as construction site monitoring. Its primary purpose is to simplify long-term visual tracking by automating image capture and organization.
 
 ## Project Layout
 - `app/` — Application code
@@ -28,12 +28,6 @@ Describe what ChronoCam2 does in 2–3 sentences. Include its primary purpose an
 - `POST /update` — Save settings (form submit)
 - `POST /action/{pause|resume|snapshot}` — Control actions
 
-## Run
-- Entry points vary by your app structure. Common options:
-  - Module: `python -m app`
-  - Script: `python app/broadcast_manager.py`
-- If you use config: review and adjust `app/config.json` before running.
-
 ## Configuration
 - File: `app/config.json`
 - Keys (subset):
@@ -48,23 +42,6 @@ Describe what ChronoCam2 does in 2–3 sentences. Include its primary purpose an
   - `city_lat` / `city_lon` / `city_tz`: location settings
   - `language`: `de` or `en` (templates/i18n)
 
-## Testing
-- Recommended: `pytest`
-- Once tests exist:
-  - Install: `python -m pip install pytest`
-  - Run: `pytest -q`
-
-## CI (GitHub Actions)
-A minimal workflow is included in `.github/workflows/ci.yml`. It:
-- Sets up Python
-- Installs `requirements.txt`
-- Runs `pytest` if a `tests/` folder exists
-
-## Contributing
-See `CONTRIBUTING.md` for guidelines. For issues and feature requests, open a GitHub Issue.
-
-## Security
-See `SECURITY.md` for reporting vulnerabilities.
 
 ## License
 This project uses the MIT License. See `LICENSE` for details. If you prefer a different license (Apache-2.0, GPL-3.0, etc.), replace the file accordingly.
