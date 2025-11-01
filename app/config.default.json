@@ -1,5 +1,5 @@
 {
-  "cam_url": "https://www.hsb-wr.de/out/pictures/webcam/BRO/CAM-PIC-BRO.jpg",
+  "cam_url": "https://raw.githubusercontent.com/der-pw/chronocam2/refs/heads/main/app/static/img/last.jpg",
   "username": "",
   "password": "",
   "auth_type": "none",
@@ -12,8 +12,7 @@
     "Tue",
     "Wed",
     "Thu",
-    "Fri",
-    "Sat"
+    "Fri"
   ],
   "use_astral": false,
   "city_lat": 52.167600,
