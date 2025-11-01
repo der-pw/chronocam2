@@ -20,8 +20,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application source
 COPY app ./app
 
-# Create a non-root user to run the application
-RUN adduser -D appuser
+# Create a non-root user to run the application and ensure writable app directory
+RUN adduser -D appuser \
+    && chown -R appuser:appuser /app
 USER appuser
 
 EXPOSE 8000
