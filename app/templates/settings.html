@@ -1,5 +1,6 @@
 {% extends "base.html" %}
-{% block title %}{{ tr['settings_title'] if tr else 'Settings' }} - {{ tr['app_name'] if tr else 'ChronoCam' }}{% endblock %}
+{% block title %}{{ tr['settings_title'] if tr else 'Settings' }} - {{ tr['app_name'] if tr else 'ChronoCam' }}{%
+endblock %}
 {% block content %}
 <h2><i class="fa-solid fa-gear me-2"></i>{{ tr['settings_title'] if tr else 'Settings' }}</h2>
 <hr class="mx-auto">
@@ -21,11 +22,12 @@
   <!-- Sprache -->
   <h5 class="mb-2"><i class="fa-solid fa-language me-2"></i>{{ tr['language'] if tr else 'Sprache' }}</h5>
   <div class="row g-3 mb-3">
-    <div class="col-md-4">
+    <div class="col-md-3">
       <label class="form-label">{{ tr['language'] if tr else 'Sprache' }}</label>
       <select class="form-select" name="LANGUAGE">
         {% for code in (langs or []) %}
-          <option value="{{ code }}" {% if (lang or 'de') == code %}selected{% endif %}>{{ tr.get(code, code) if tr else code }}</option>
+        <option value="{{ code }}" {% if (lang or 'de' )==code %}selected{% endif %}>{{ tr.get(code, code) if tr else
+          code }}</option>
         {% endfor %}
       </select>
     </div>
@@ -34,15 +36,15 @@
   <!-- Kameraeinstellungen -->
   <h5 class="mb-2"><i class="fa-solid fa-camera me-2"></i>{{ tr["camera"] if tr else "Camera" }}</h5>
   <div class="row g-3 mb-3">
-    <div class="col-md-6">
+    <div class="col-md-10">
       <label class="form-label">{{ tr["snapshot_url"] if tr else "Snapshot URL" }}</label>
       <input class="form-control" name="CAM_URL" value="{{ cfg.cam_url }}">
     </div>
-    <div class="col-md-3">
+    <div class="col-md-2">
       <label class="form-label">{{ tr["interval_seconds"] if tr else "Interval (sec)" }}</label>
       <input type="number" min="1" class="form-control" name="INTERVAL_SECONDS" value="{{ cfg.interval_seconds }}">
     </div>
-    <div class="col-md-3">
+    <div class="col-md-3" style="display:none;">
       <label class="form-label">{{ tr["save_path"] if tr else "Save Path" }}</label>
       <input class="form-control" name="SAVE_PATH" value="{{ cfg.save_path }}">
     </div>
@@ -51,19 +53,22 @@
   <!-- Authentifizierung -->
   <h5 class="mb-2"><i class="fa-solid fa-lock me-2"></i>{{ tr["auth"] if tr else "Authentication" }}</h5>
   <div class="row g-3 mb-3">
-    <div class="col-md-4">
+    <div class="col-md-2">
       <label class="form-label">{{ tr["auth_type"] if tr else "Auth Type" }}</label>
       <select class="form-select" name="AUTH_TYPE">
-        <option value="none" {% if cfg.auth_type=="none" %}selected{% endif %}>{{ tr["none"] if tr else "None" }}</option>
-        <option value="basic" {% if cfg.auth_type=="basic" %}selected{% endif %}>{{ tr["basic"] if tr else "HTTP Basic" }}</option>
-        <option value="digest" {% if cfg.auth_type=="digest" %}selected{% endif %}>{{ tr["digest"] if tr else "HTTP Digest" }}</option>
+        <option value="none" {% if cfg.auth_type=="none" %}selected{% endif %}>{{ tr["none"] if tr else "None" }}
+        </option>
+        <option value="basic" {% if cfg.auth_type=="basic" %}selected{% endif %}>{{ tr["basic"] if tr else "HTTP Basic"
+          }}</option>
+        <option value="digest" {% if cfg.auth_type=="digest" %}selected{% endif %}>{{ tr["digest"] if tr else "HTTP
+          Digest" }}</option>
       </select>
     </div>
-    <div class="col-md-4">
+    <div class="col-md-5">
       <label class="form-label">{{ tr["username"] if tr else "Username" }}</label>
       <input class="form-control" name="USERNAME" value="{{ cfg.username or '' }}">
     </div>
-    <div class="col-md-4">
+    <div class="col-md-5">
       <label class="form-label">{{ tr["password"] if tr else "Password" }}</label>
       <input type="password" class="form-control" name="PASSWORD" value="{{ cfg.password or '' }}">
     </div>
@@ -73,7 +78,7 @@
   <h5 class="mb-2"><i class="fa-solid fa-clock me-2"></i>{{ tr["time_control"] if tr else "Time Control" }}</h5>
   <div class="row g-3 mb-3">
     <!-- Linke Spalte: Start-/Endzeit (untereinander) -->
-    <div class="col-md-4">
+    <div class="col-md-3">
       <div class="mb-3">
         <label class="form-label">{{ tr["start_time"] if tr else "Start Time" }}</label>
         <input class="form-control" name="ACTIVE_START" value="{{ cfg.active_start }}">
@@ -85,35 +90,42 @@
     </div>
 
     <!-- Rechte Spalte: {{ tr["weekdays"] if tr else "Weekdays" }} (eine Zeile neben Startzeit) -->
-    <div class="col-md-8">
+    <div class="col-md-9">
       <label class="form-label d-block">{{ tr["weekdays"] if tr else "Weekdays" }}</label>
       <div class="d-flex flex-wrap gap-3 align-items-center">
         <div class="form-check form-check-inline">
-          <input class="form-check-input" type="checkbox" id="day-Mon" name="ACTIVE_DAYS" value="Mon" {% if 'Mon' in cfg.active_days %}checked{% endif %}>
+          <input class="form-check-input" type="checkbox" id="day-Mon" name="ACTIVE_DAYS" value="Mon" {% if 'Mon' in
+            cfg.active_days %}checked{% endif %}>
           <label class="form-check-label" for="day-Mon">Mo</label>
         </div>
         <div class="form-check form-check-inline">
-          <input class="form-check-input" type="checkbox" id="day-Tue" name="ACTIVE_DAYS" value="Tue" {% if 'Tue' in cfg.active_days %}checked{% endif %}>
+          <input class="form-check-input" type="checkbox" id="day-Tue" name="ACTIVE_DAYS" value="Tue" {% if 'Tue' in
+            cfg.active_days %}checked{% endif %}>
           <label class="form-check-label" for="day-Tue">Di</label>
         </div>
         <div class="form-check form-check-inline">
-          <input class="form-check-input" type="checkbox" id="day-Wed" name="ACTIVE_DAYS" value="Wed" {% if 'Wed' in cfg.active_days %}checked{% endif %}>
+          <input class="form-check-input" type="checkbox" id="day-Wed" name="ACTIVE_DAYS" value="Wed" {% if 'Wed' in
+            cfg.active_days %}checked{% endif %}>
           <label class="form-check-label" for="day-Wed">Mi</label>
         </div>
         <div class="form-check form-check-inline">
-          <input class="form-check-input" type="checkbox" id="day-Thu" name="ACTIVE_DAYS" value="Thu" {% if 'Thu' in cfg.active_days %}checked{% endif %}>
+          <input class="form-check-input" type="checkbox" id="day-Thu" name="ACTIVE_DAYS" value="Thu" {% if 'Thu' in
+            cfg.active_days %}checked{% endif %}>
           <label class="form-check-label" for="day-Thu">Do</label>
         </div>
         <div class="form-check form-check-inline">
-          <input class="form-check-input" type="checkbox" id="day-Fri" name="ACTIVE_DAYS" value="Fri" {% if 'Fri' in cfg.active_days %}checked{% endif %}>
+          <input class="form-check-input" type="checkbox" id="day-Fri" name="ACTIVE_DAYS" value="Fri" {% if 'Fri' in
+            cfg.active_days %}checked{% endif %}>
           <label class="form-check-label" for="day-Fri">Fr</label>
         </div>
         <div class="form-check form-check-inline">
-          <input class="form-check-input" type="checkbox" id="day-Sat" name="ACTIVE_DAYS" value="Sat" {% if 'Sat' in cfg.active_days %}checked{% endif %}>
+          <input class="form-check-input" type="checkbox" id="day-Sat" name="ACTIVE_DAYS" value="Sat" {% if 'Sat' in
+            cfg.active_days %}checked{% endif %}>
           <label class="form-check-label" for="day-Sat">Sa</label>
         </div>
         <div class="form-check form-check-inline">
-          <input class="form-check-input" type="checkbox" id="day-Sun" name="ACTIVE_DAYS" value="Sun" {% if 'Sun' in cfg.active_days %}checked{% endif %}>
+          <input class="form-check-input" type="checkbox" id="day-Sun" name="ACTIVE_DAYS" value="Sun" {% if 'Sun' in
+            cfg.active_days %}checked{% endif %}>
           <label class="form-check-label" for="day-Sun">So</label>
         </div>
       </div>
@@ -129,7 +141,8 @@
   </div>
   <div class="mb-2">
     <a href="https://www.latlong.net/convert-address-to-lat-long.html" target="_blank" rel="noopener noreferrer">
-      <i class="fa-solid fw-7 fa-location-dot me-1"></i>{{ tr['coords_help'] if tr else 'Get coordinates from address' }}
+      <i class="fa-solid fw-7 fa-location-dot me-1"></i>{{ tr['coords_help'] if tr else 'Get coordinates from address'
+      }}
     </a>
   </div>
   <div class="row g-3 mb-3">
@@ -148,9 +161,8 @@
   </div>
   <hr class="mx-auto">
   <div class="mt-4 text-end">
-    <button class="btn btn-success px-4" type="submit"><i class="fa-solid fa-floppy-disk me-2"></i>{{ tr["save"] if tr else "Save" }}</button>
+    <button class="btn btn-success px-4" type="submit"><i class="fa-solid fa-floppy-disk me-2"></i>{{ tr["save"] if tr
+      else "Save" }}</button>
   </div>
 </form>
 {% endblock %}
-
-

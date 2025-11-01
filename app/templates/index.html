@@ -15,7 +15,7 @@
   <div class="text-center mt-3 mb-3">
     <div class="image-frame">
       <img id="latest-img" src="{{ url_for('static', path='img/last.jpg') }}?t={{ cache_buster }}" alt="{{ tr['last_image_alt'] if tr else 'Last image' }}"
-        class="img-fluid rounded shadow-sm" style="max-height: 500px;" onerror="this.closest('.image-frame').style.display='none';">
+        class="img-fluid" onerror="this.closest('.image-frame').style.display='none';">
     </div>
     <p id="last-time" class=" mt-2" style="display:none;">2223</p>
   </div>
@@ -183,4 +183,3 @@
 </script>
 
 {% endblock %}
-

@@ -52,9 +52,9 @@ def is_active_time(cfg):
 # === 🆕 Neu: Letztes vorhandenes Bild beim Start kopieren ===
 def copy_latest_image_on_startup(cfg):
     """Kopiert das neueste vorhandene Bild aus data/ nach static/img/last.jpg."""
-    base_dir = Path(__file__).resolve().parent.parent
-    data_dir = (base_dir / cfg.save_path).resolve()
-    target_path = base_dir / "app" / "static" / "img" / "last.jpg"
+    app_dir = Path(__file__).resolve().parent
+    data_dir = (app_dir / cfg.save_path).resolve()
+    target_path = app_dir / "static" / "img" / "last.jpg"
 
     if not data_dir.exists():
         print(f"[INIT] Kein Datenverzeichnis gefunden: {data_dir}")
@@ -97,9 +97,9 @@ def job_snapshot():
     if result:
         # Nach jedem neuen Snapshot → last.jpg aktualisieren
         try:
-            base_dir = Path(__file__).resolve().parent.parent
+            app_dir = Path(__file__).resolve().parent
             src = Path(result["filepath"])
-            dest = base_dir / "app" / "static" / "img" / "last.jpg"
+            dest = app_dir / "static" / "img" / "last.jpg"
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(src, dest)
         except Exception as e:

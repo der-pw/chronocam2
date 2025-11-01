@@ -150,8 +150,8 @@ async def status():
     async with cfg_lock:
         local_cfg = cfg
 
-    base_dir = Path(__file__).resolve().parent.parent
-    save_path = (base_dir / local_cfg.save_path).resolve()
+    app_dir = Path(__file__).resolve().parent
+    save_path = (app_dir / local_cfg.save_path).resolve()
 
     count = 0
     if save_path.exists():

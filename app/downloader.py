@@ -13,7 +13,8 @@ def take_snapshot(cfg):
         return None
 
     try:
-        save_dir = Path(cfg.save_path)
+        app_dir = Path(__file__).resolve().parent
+        save_dir = (app_dir / cfg.save_path).resolve()
         save_dir.mkdir(parents=True, exist_ok=True)
 
         now = datetime.now()
