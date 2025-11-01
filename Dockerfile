@@ -20,10 +20,13 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application source
 COPY app ./app
 
-# Create a non-root user to run the application
-RUN adduser -D appuser
+# Create a non-root user and fix ownership of relevant directories
+RUN adduser -D appuser \
+    && chown -R appuser:appuser /app
+
 USER appuser
 
 EXPOSE 8000
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
