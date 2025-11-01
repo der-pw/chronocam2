@@ -1,9 +1,21 @@
 # ChronoCam2
+![image](./app/static/img/last.jpg)
 
 A Docker-ready, simple web app for scheduling and recording webcams for snapshots or time-lapse recordings.
 
+## Table of Contents
+- [Overview](#overview)
+- [Project Layout](#project-layout)
+- [Quickstart](#quickstart)
+- [Run (API + Web UI)](#run-api--web-ui)
+  - [Endpoints](#endpoints)
+- [Configuration](#configuration)
+- [Docker Compose](#docker-compose)
+  - [Linux Quick Start (Docker Compose)](#linux-quick-start-docker-compose)
+- [License](#license)
+
 ## Overview
-ChronoCam2 is a tool for automatically capturing images from a webcam at regular intervals. Users can define the recording schedule — including specific days, time ranges, or daylight-only operation — making it ideal for outdoor time-lapse documentation, such as construction site monitoring. Its primary purpose is to simplify long-term visual tracking by automating image capture and organization.
+ChronoCam2 is a tool for automatically capturing images from a webcam at regular intervals. Users can define the recording schedule - including specific days, time ranges, or daylight-only operation - making it ideal for outdoor time-lapse documentation, such as construction site monitoring. Its primary purpose is to simplify long-term visual tracking by automating image capture and organization.
 
 ## Project Layout
 - `app/` — Application code
