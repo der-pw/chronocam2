@@ -10,12 +10,12 @@ from datetime import datetime
 
 from app.config_manager import load_config, save_config
 from app.models import ConfigModel
-from app.scheduler import start_scheduler, stop_scheduler, cfg_lock, cfg, set_paused
+from app.scheduler import start_scheduler, stop_scheduler, cfg_lock, cfg, set_paused, is_active_time
 from app import i18n
 from app.broadcast_manager import clients, broadcast
 from app.logger_utils import log
 from app.downloader import take_snapshot
-from app.sunrise_utils import get_sun_times, is_within_time_range
+from app.sunrise_utils import get_sun_times
 
 # === FastAPI App ===
 app = FastAPI()
@@ -170,16 +170,8 @@ async def status():
         sunrise_str = "--:--"
         sunset_str = "--:--"
 
-    try:
-        cfg_start = datetime.strptime(local_cfg.active_start, "%H:%M").time()
-        cfg_end = datetime.strptime(local_cfg.active_end, "%H:%M").time()
-    except Exception:
-        cfg_start = datetime.strptime("00:00", "%H:%M").time()
-        cfg_end = datetime.strptime("23:59", "%H:%M").time()
-
-    active = is_within_time_range(cfg_start, cfg_end)
-    if getattr(local_cfg, "use_astral", False) and sunrise_time and sunset_time:
-        active = active and is_within_time_range(sunrise_time, sunset_time)
+    # Verwende dieselbe Logik wie der Scheduler, inkl. aktiver Wochentage
+    active = is_active_time(local_cfg)
 
     from app.scheduler import is_paused as scheduler_paused
     return {

@@ -12,11 +12,13 @@
     "Tue",
     "Wed",
     "Thu",
-    "Fri"
+    "Fri",
+    "Sat",
+    "Sun"
   ],
   "use_astral": false,
-  "city_lat": 52.167600,
-  "city_lon": 10.547973,
+  "city_lat": 52.1676,
+  "city_lon": 10.5479,
   "city_tz": "Europe/Berlin",
   "log_file": null,
   "log_enabled": true,
