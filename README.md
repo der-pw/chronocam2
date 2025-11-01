@@ -28,8 +28,8 @@ ChronoCam2 is a tool for automatically capturing images from a webcam at regular
 
 ### Endpoints
 - `GET /` — Dashboard (templates + static)
-
 - `GET /events` — Server-Sent Events for live updates
+- `GET /settings` — Settings page
 - `GET /status` — JSON status for UI
 - `POST /update` — Save settings (form submit)
 - `POST /action/{pause|resume|snapshot}` — Control actions
@@ -51,8 +51,3 @@ ChronoCam2 is a tool for automatically capturing images from a webcam at regular
 
 ## License
 This project uses the MIT License. See `LICENSE` for details. If you prefer a different license (Apache-2.0, GPL-3.0, etc.), replace the file accordingly.
-
-## Notes
-- Form handling requires `python-multipart` (included in `requirements.txt`).
-- Static files are served from `app/static`; templates from `app/templates`.
-- On Windows, timezone data may require `tzdata` (included via marker).
