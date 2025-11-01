@@ -43,6 +43,7 @@ data/
 app/config.local.json
 *.bak
 app/downloads/*
+infos.txt
 
 # macOS
 .DS_Store
