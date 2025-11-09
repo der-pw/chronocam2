@@ -17,7 +17,7 @@
       <img id="latest-img" src="{{ url_for('static', path='img/last.jpg') }}?t={{ cache_buster }}" alt="{{ tr['last_image_alt'] if tr else 'Last image' }}"
         class="img-fluid" onerror="this.closest('.image-frame').style.display='none';">
     </div>
-    <p id="last-time" class=" mt-2" style="display:none;">2223</p>
+    <p id="last-time" class="mt-2">{{ tr["last_image_label"] if tr else "Last image" }}: --:--:--</p>
   </div>
 
 <!-- Steuerung -->
@@ -78,11 +78,35 @@
   // Localized UI strings injected by Jinja
   const LAST_IMAGE_LABEL = {{ (tr['last_image_label'] if tr else 'Last image') | tojson }};
   const CAMERA_ERROR_PREFIX = {{ (tr['camera_error_prefix'] if tr else 'Camera error') | tojson }};
+  const CAMERA_ERROR_MESSAGES = {
+    snapshot_failed: {{ (tr['camera_error_snapshot_failed'] if tr else 'Snapshot failed') | tojson }}
+  };
+  const EMPTY_TIME = "--:--:--";
+
+  function updateCameraError(errorInfo) {
+    if (!camErr) return;
+    if (errorInfo) {
+      const detail = (errorInfo.code && CAMERA_ERROR_MESSAGES[errorInfo.code]) || errorInfo.message || '';
+      camErr.textContent = CAMERA_ERROR_PREFIX + (detail ? ': ' + detail : '');
+      camErr.style.display = 'block';
+    } else {
+      camErr.textContent = '';
+      camErr.style.display = 'none';
+    }
+  }
+
+  function clearStatusRevert() {
+    if (statusRevertTimer) {
+      clearTimeout(statusRevertTimer);
+      statusRevertTimer = null;
+    }
+  }
 
   function scheduleStatusRevert(ms = 5000) {
-    if (statusRevertTimer) clearTimeout(statusRevertTimer);
+    clearStatusRevert();
     statusRevertTimer = setTimeout(() => {
       fetchStatus();
+      statusRevertTimer = null;
     }, ms);
   }
 
@@ -104,6 +128,11 @@
       sunsetEl.textContent = d.sunset || '--:--';
       imageCount = d.count || 0;
       countEl.textContent = imageCount;
+      if (lastTime) {
+        lastTime.textContent = LAST_IMAGE_LABEL + ": " + (d.last_snapshot || EMPTY_TIME);
+        lastTime.style.display = '';
+      }
+      updateCameraError(d.camera_error || null);
       if (d.paused === true) {
         statusText.textContent = {{ (tr['paused'] if tr else 'Recording paused') | tojson }};
       } else if (d.active === true) {
@@ -128,8 +157,11 @@
         countEl.textContent = imageCount;
         latestImg.src = bust('/static/img/last.jpg');
         latestImg.style.display = '';
-        lastTime.textContent = LAST_IMAGE_LABEL + ": " + (d.timestamp || "--:--:--");
-        lastTime.style.display = '';
+        if (lastTime) {
+          lastTime.textContent = LAST_IMAGE_LABEL + ": " + (d.timestamp || EMPTY_TIME);
+          lastTime.style.display = '';
+        }
+        updateCameraError(null);
         if (statusIcon) statusIcon.textContent = '';
         statusText.textContent = {{ (tr['last_image_success'] if tr else 'Last image captured successfully') | tojson }};
         scheduleStatusRevert(5000);
@@ -137,26 +169,30 @@
 
       // Statusänderungen
       if (d.type === 'status') {
+        let needsRevert = false;
+        if (statusIcon) statusIcon.textContent = '';
         if (d.status === 'paused') {
-          if (statusIcon) statusIcon.textContent = '';
           statusText.textContent = {{ (tr['paused'] if tr else 'Recording paused') | tojson }};
         } else if (d.status === 'running') {
-          if (statusIcon) statusIcon.textContent = '';
           statusText.textContent = {{ (tr['running'] if tr else 'Recording running') | tojson }};
+        } else if (d.status === 'waiting_window') {
+          statusText.textContent = {{ (tr['waiting_window'] if tr else 'Waiting for active time window') | tojson }};
         } else if (d.status === 'config_reloaded') {
-          if (statusIcon) statusIcon.textContent = '';
           statusText.textContent = {{ (tr['config_reloaded'] if tr else 'Configuration reloaded') | tojson }};
+          needsRevert = true;
         }
-        scheduleStatusRevert(5000);
+        if (needsRevert) {
+          scheduleStatusRevert(5000);
+        } else {
+          clearStatusRevert();
+        }
       }
 
       // Kamera-Fehler
       if (d.type === 'camera_error') {
-        camErr.textContent = CAMERA_ERROR_PREFIX + ': ' + (d.message || '');
-        camErr.style.display = 'block';
+        updateCameraError({ code: d.code, message: d.message });
         if (statusIcon) statusIcon.textContent = '';
         statusText.textContent = {{ (tr['camera_error'] if tr else 'Camera access error') | tojson }};
-        setTimeout(() => camErr.style.display = 'none', 8000);
         scheduleStatusRevert(8000);
       }
 

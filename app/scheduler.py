@@ -10,12 +10,14 @@ from app.logger_utils import log
 from app.broadcast_manager import broadcast
 from app.sunrise_utils import is_within_time_range, get_sun_times
 from app.config_manager import load_config
+from app.runtime_state import set_camera_error, clear_camera_error
 
 # Globale Variablen
 scheduler = None
 cfg = load_config()
 cfg_lock = asyncio.Lock()
 is_paused = False
+STATUS_HEARTBEAT_SECONDS = 10
 
 
 # === Prüfen, ob aktuell Aufnahmezeit ist ===
@@ -111,8 +113,36 @@ def job_snapshot():
             "timestamp": result["timestamp"]
         }))
         log("info", f"Snapshot gespeichert: {result['filename']}")
+        clear_camera_error()
     else:
         log("error", "Snapshot fehlgeschlagen")
+        set_camera_error("snapshot_failed", "Snapshot fehlgeschlagen")
+        try:
+            asyncio.run(broadcast({
+                "type": "camera_error",
+                "code": "snapshot_failed",
+                "message": "Snapshot fehlgeschlagen"
+            }))
+        except RuntimeError as err:
+            log("error", f"Kamera-Fehler konnte nicht gesendet werden: {err}")
+
+
+def job_status_heartbeat():
+    """Sendet regelmäßige Status-Events via SSE."""
+    global cfg, is_paused
+
+    if is_paused:
+        status = "paused"
+    else:
+        status = "running" if is_active_time(cfg) else "waiting_window"
+
+    try:
+        asyncio.run(broadcast({
+            "type": "status",
+            "status": status
+        }))
+    except RuntimeError as err:
+        log("error", f"Status-Heartbeat konnte nicht gesendet werden: {err}")
 
 
 # === Scheduler starten ===
@@ -132,6 +162,12 @@ def start_scheduler():
         job_snapshot,
         trigger=IntervalTrigger(seconds=cfg.interval_seconds),
         id="job_snapshot",
+        replace_existing=True
+    )
+    scheduler.add_job(
+        job_status_heartbeat,
+        trigger=IntervalTrigger(seconds=STATUS_HEARTBEAT_SECONDS),
+        id="job_status_heartbeat",
         replace_existing=True
     )
 

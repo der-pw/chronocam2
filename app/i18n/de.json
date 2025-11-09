@@ -19,6 +19,7 @@
   "config_reloaded": "Konfiguration neu geladen",
   "last_image_success": "Letztes Bild erfolgreich aufgenommen",
   "camera_error": "Fehler beim Zugriff auf Kamera",
+  "camera_error_snapshot_failed": "Snapshot fehlgeschlagen",
   "settings_title": "Einstellungen",
   "camera": "Kamera",
   "snapshot_url": "Snapshot-URL",

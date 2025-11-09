@@ -16,6 +16,11 @@ from app.broadcast_manager import clients, broadcast
 from app.logger_utils import log
 from app.downloader import take_snapshot
 from app.sunrise_utils import get_sun_times
+from app.runtime_state import (
+    set_camera_error,
+    clear_camera_error,
+    get_camera_error,
+)
 
 # === FastAPI App ===
 app = FastAPI()
@@ -154,11 +159,18 @@ async def status():
     save_path = (app_dir / local_cfg.save_path).resolve()
 
     count = 0
+    last_snapshot_ts = None
+    latest_mtime = None
+    allowed_suffixes = ('.jpg', '.jpeg', '.png')
     if save_path.exists():
-        count = len([
-            f for f in save_path.iterdir()
-            if f.is_file() and f.suffix.lower() in ('.jpg', '.jpeg', '.png')
-        ])
+        for f in save_path.iterdir():
+            if f.is_file() and f.suffix.lower() in allowed_suffixes:
+                count += 1
+                mtime = f.stat().st_mtime
+                if latest_mtime is None or mtime > latest_mtime:
+                    latest_mtime = mtime
+        if latest_mtime:
+            last_snapshot_ts = datetime.fromtimestamp(latest_mtime).strftime("%H:%M:%S")
     else:
         log("warn", f"Speicherpfad existiert nicht: {save_path}")
 
@@ -180,7 +192,9 @@ async def status():
         "paused": bool(scheduler_paused),
         "sunrise": sunrise_str,
         "sunset": sunset_str,
-        "count": count
+        "count": count,
+        "last_snapshot": last_snapshot_ts,
+        "camera_error": get_camera_error()
     }
 
 
@@ -205,6 +219,7 @@ async def action_snapshot():
         local_cfg = cfg
     result = take_snapshot(local_cfg)
     if result:
+        clear_camera_error()
         await broadcast({
             "type": "snapshot",
             "filename": result["filename"],
@@ -212,8 +227,10 @@ async def action_snapshot():
         })
         return {"ok": True}
     else:
+        set_camera_error("snapshot_failed", "Snapshot fehlgeschlagen")
         await broadcast({
             "type": "camera_error",
+            "code": "snapshot_failed",
             "message": "Snapshot fehlgeschlagen"
         })
         return {"ok": False}
