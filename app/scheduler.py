@@ -110,7 +110,8 @@ def job_snapshot():
         asyncio.run(broadcast({
             "type": "snapshot",
             "filename": result["filename"],
-            "timestamp": result["timestamp"]
+            "timestamp": result["timestamp"],
+            "timestamp_full": result.get("timestamp_full")
         }))
         log("info", f"Snapshot gespeichert: {result['filename']}")
         clear_camera_error()

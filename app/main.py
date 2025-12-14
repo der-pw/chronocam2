@@ -160,6 +160,7 @@ async def status():
 
     count = 0
     last_snapshot_ts = None
+    last_snapshot_full = None
     latest_mtime = None
     allowed_suffixes = ('.jpg', '.jpeg', '.png')
     if save_path.exists():
@@ -170,7 +171,9 @@ async def status():
                 if latest_mtime is None or mtime > latest_mtime:
                     latest_mtime = mtime
         if latest_mtime:
-            last_snapshot_ts = datetime.fromtimestamp(latest_mtime).strftime("%H:%M:%S")
+            latest_dt = datetime.fromtimestamp(latest_mtime)
+            last_snapshot_ts = latest_dt.strftime("%H:%M:%S")
+            last_snapshot_full = latest_dt.strftime("%d.%m.%y %H:%M")
     else:
         log("warn", f"Speicherpfad existiert nicht: {save_path}")
 
@@ -194,6 +197,7 @@ async def status():
         "sunset": sunset_str,
         "count": count,
         "last_snapshot": last_snapshot_ts,
+        "last_snapshot_tooltip": last_snapshot_full,
         "camera_error": get_camera_error()
     }
 
@@ -223,7 +227,8 @@ async def action_snapshot():
         await broadcast({
             "type": "snapshot",
             "filename": result["filename"],
-            "timestamp": result["timestamp"]
+            "timestamp": result["timestamp"],
+            "timestamp_full": result.get("timestamp_full")
         })
         return {"ok": True}
     else:

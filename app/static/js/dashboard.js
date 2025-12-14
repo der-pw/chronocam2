@@ -71,17 +71,17 @@
     els.lastTime.textContent = `${messages.lastLabel}: ${timestamp || EMPTY_TIME}`;
     els.lastTime.style.display = '';
     const tooltip = formatTimestampTooltip(tooltipValue || timestamp);
+    const existingTooltip = window.bootstrap?.Tooltip?.getInstance?.(els.lastTime);
+    if (existingTooltip) existingTooltip.dispose();
     if (tooltip) {
-      els.lastTime.setAttribute('title', tooltip);
+      els.lastTime.setAttribute('data-bs-title', tooltip);
       els.lastTime.setAttribute('data-bs-toggle', 'tooltip');
       els.lastTime.setAttribute('data-bs-placement', 'top');
       if (window.bootstrap && window.bootstrap.Tooltip) {
-        window.bootstrap.Tooltip.getOrCreateInstance(els.lastTime, {
-          title: tooltip
-        });
+        window.bootstrap.Tooltip.getOrCreateInstance(els.lastTime);
       }
     } else {
-      els.lastTime.removeAttribute('title');
+      els.lastTime.removeAttribute('data-bs-title');
       els.lastTime.removeAttribute('data-bs-toggle');
       els.lastTime.removeAttribute('data-bs-placement');
     }

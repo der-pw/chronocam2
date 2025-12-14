@@ -58,7 +58,8 @@ def take_snapshot(cfg):
         return {
             "filename": filename,
             "filepath": str(filepath),
-            "timestamp": now.strftime("%H:%M:%S")
+            "timestamp": now.strftime("%H:%M:%S"),
+            "timestamp_full": now.strftime("%d.%m.%y %H:%M")
         }
 
     except Exception as e:
