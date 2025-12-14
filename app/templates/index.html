@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}{{ tr['dashboard_title'] if tr else 'Dashboard' }} - {{ tr['app_name'] if tr else 'ChronoCam' }}{% endblock %}
 {% block content %}
 <div id="dashboard-app"
@@ -14,7 +14,7 @@
      data-status-reconnecting="{{ tr.get('status_reconnecting', 'Reconnecting to live updates …') | e if tr else 'Reconnecting to live updates …' }}"
      data-status-failed="{{ tr.get('status_failed', 'Status konnte nicht geladen werden') | e if tr else 'Status konnte nicht geladen werden' }}"
      data-action-error="{{ tr.get('action_error', 'Action failed') | e if tr else 'Action failed' }}"
-     data-action-success="{{ tr.get('action_success', 'Aktion ausgeführt') | e if tr else 'Action completed' }}">
+     data-action-success="{{ tr.get('action_success', 'Action completed') | e if tr else 'Action completed' }}">
 
   <h2><i class="fa-solid fa-camera me-2"></i>{{ tr["dashboard_title"] if tr else "Dashboard" }}</h2>
   <hr class="mx-auto">

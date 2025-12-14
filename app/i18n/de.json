@@ -20,6 +20,8 @@
   "last_image_success": "Letztes Bild erfolgreich aufgenommen",
   "camera_error": "Fehler beim Zugriff auf Kamera",
   "camera_error_snapshot_failed": "Snapshot fehlgeschlagen",
+  "action_error": "Aktion fehlgeschlagen",
+  "action_success": "Aktion ausgeführt",
   "settings_title": "Einstellungen",
   "camera": "Kamera",
   "snapshot_url": "Snapshot-URL",
