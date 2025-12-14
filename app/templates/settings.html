@@ -9,16 +9,14 @@ endblock %}
   <i class="fa-solid fa-circle-check me-2"></i>Einstellungen gespeichert
   <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
-<script>
-  setTimeout(() => {
-    const alert = document.getElementById('save-alert');
-    if (alert) alert.remove();
-  }, 3000);
-</script>
 {% endif %}
 
 
-<form method="post" action="/update" class="mt-3">
+<div id="settings-status" class="mt-3"></div>
+
+<form id="settings-form" method="post" action="/update" class="mt-3"
+      data-save-success="{{ tr.get('settings_saved', 'Einstellungen gespeichert') if tr else 'Einstellungen gespeichert' }}"
+      data-save-error="{{ tr.get('settings_save_failed', 'Speichern fehlgeschlagen') if tr else 'Speichern fehlgeschlagen' }}">
   <!-- Sprache -->
   <h5 class="mb-2"><i class="fa-solid fa-language me-2"></i>{{ tr['language'] if tr else 'Sprache' }}</h5>
   <div class="row g-3 mb-3">
@@ -169,4 +167,8 @@ endblock %}
       else "Save" }}</button>
   </div>
 </form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', path='js/settings.js') }}"></script>
 {% endblock %}
