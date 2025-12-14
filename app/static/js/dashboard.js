@@ -47,6 +47,28 @@
 
   const bust = (u) => `${u}${u.includes('?') ? '&' : '?'}t=${Date.now()}`;
 
+  const formatTimestampTooltip = (timestamp) => {
+    if (!timestamp) return '';
+    const parsed = new Date(timestamp);
+    if (Number.isNaN(parsed.getTime())) {
+      // If parsing fails, fall back to showing the raw timestamp in the tooltip.
+      return timestamp;
+    }
+    return `${parsed.toLocaleDateString()} ${parsed.toLocaleTimeString()}`;
+  };
+
+  const updateLastTime = (timestamp) => {
+    if (!els.lastTime) return;
+    els.lastTime.textContent = `${messages.lastLabel}: ${timestamp || EMPTY_TIME}`;
+    els.lastTime.style.display = '';
+    const tooltip = formatTimestampTooltip(timestamp);
+    if (tooltip) {
+      els.lastTime.setAttribute('title', tooltip);
+    } else {
+      els.lastTime.removeAttribute('title');
+    }
+  };
+
   function setStatus(message, revertMs) {
     if (!els.statusText) return;
     els.statusText.textContent = message || '';
@@ -94,10 +116,7 @@
       const snapshotChanged = newSnapshot && newSnapshot !== lastSnapshot;
       lastSnapshot = newSnapshot;
 
-      if (els.lastTime) {
-        els.lastTime.textContent = `${messages.lastLabel}: ${newSnapshot || EMPTY_TIME}`;
-        els.lastTime.style.display = '';
-      }
+      updateLastTime(newSnapshot);
 
       if (syncImage && snapshotChanged) {
         refreshImage();
@@ -126,10 +145,7 @@
     if (els.count) els.count.textContent = imageCount;
     if (timestamp) lastSnapshot = timestamp;
     refreshImage();
-    if (els.lastTime) {
-      els.lastTime.textContent = `${messages.lastLabel}: ${timestamp || EMPTY_TIME}`;
-      els.lastTime.style.display = '';
-    }
+    updateLastTime(timestamp);
     updateCameraError(null);
     setStatus(messages.statusLastSuccess, 5000);
   }
