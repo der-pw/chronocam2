@@ -1,221 +1,82 @@
 ﻿{% extends "base.html" %}
 {% block title %}{{ tr['dashboard_title'] if tr else 'Dashboard' }} - {{ tr['app_name'] if tr else 'ChronoCam' }}{% endblock %}
 {% block content %}
+<div id="dashboard-app"
+     data-last-label="{{ (tr['last_image_label'] if tr else 'Last image') | e }}"
+     data-camera-error-prefix="{{ (tr['camera_error_prefix'] if tr else 'Camera error') | e }}"
+     data-camera-error-snapshot="{{ (tr['camera_error_snapshot_failed'] if tr else 'Snapshot failed') | e }}"
+     data-status-paused="{{ (tr['paused'] if tr else 'Recording paused') | e }}"
+     data-status-running="{{ (tr['running'] if tr else 'Recording running') | e }}"
+     data-status-waiting="{{ (tr['waiting_window'] if tr else 'Waiting for active time window') | e }}"
+     data-status-config-reloaded="{{ (tr['config_reloaded'] if tr else 'Configuration reloaded') | e }}"
+     data-status-camera-error="{{ (tr['camera_error'] if tr else 'Camera access error') | e }}"
+     data-status-last-success="{{ (tr['last_image_success'] if tr else 'Last image captured successfully') | e }}"
+     data-status-reconnecting="{{ tr.get('status_reconnecting', 'Reconnecting to live updates …') | e if tr else 'Reconnecting to live updates …' }}"
+     data-status-failed="{{ tr.get('status_failed', 'Status konnte nicht geladen werden') | e if tr else 'Status konnte nicht geladen werden' }}"
+     data-action-error="{{ tr.get('action_error', 'Action failed') | e if tr else 'Action failed' }}"
+     data-action-success="{{ tr.get('action_success', 'Aktion ausgeführt') | e if tr else 'Action completed' }}">
 
-<h2><i class="fa-solid fa-camera me-2"></i>{{ tr["dashboard_title"] if tr else "Dashboard" }}</h2>
-<hr class="mx-auto">
+  <h2><i class="fa-solid fa-camera me-2"></i>{{ tr["dashboard_title"] if tr else "Dashboard" }}</h2>
+  <hr class="mx-auto">
 
-  <!-- Statusanzeige -->
-  <div id="status-container" class="my-3">
-    <p id="status-text" class="lead m-0">{{ tr["status_starting"] if tr else "Starting monitoring ..." }}</p>
-    <p id="cam-error" class="text-danger mt-2" style="display:none;"></p>
-  </div>
-
-  <!-- Bildanzeige -->
-  <div class="text-center mt-3 mb-3">
-    <div class="image-frame bg-body-tertiary">
-      <img id="latest-img" src="{{ url_for('static', path='img/last.jpg') }}?t={{ cache_buster }}" alt="{{ tr['last_image_alt'] if tr else 'Last image' }}"
-        class="img-fluid" onerror="this.closest('.image-frame').style.display='none';">
+    <!-- Statusanzeige -->
+    <div id="status-container" class="my-3">
+      <p id="status-text" class="lead m-0">{{ tr["status_starting"] if tr else "Starting monitoring ..." }}</p>
+      <p id="cam-error" class="text-danger mt-2" style="display:none;"></p>
     </div>
-    <p id="last-time" class="mt-2">{{ tr["last_image_label"] if tr else "Last image" }}: --:--:--</p>
+
+    <!-- Bildanzeige -->
+    <div class="text-center mt-3 mb-3">
+      <div class="image-frame bg-body-tertiary">
+        <img id="latest-img" src="{{ url_for('static', path='img/last.jpg') }}?t={{ cache_buster }}" alt="{{ tr['last_image_alt'] if tr else 'Last image' }}"
+          class="img-fluid" onerror="this.closest('.image-frame').style.display='none';">
+      </div>
+      <p id="last-time" class="mt-2">{{ tr["last_image_label"] if tr else "Last image" }}: --:--:--</p>
+    </div>
+
+  <!-- Steuerung -->
+  <div class="d-flex justify-content-center mb-3 gap-3">
+    <button id="btn-pause" class="btn btn-warning">{{ tr["pause"] if tr else "Pause" }}</button>
+    <button id="btn-resume" class="btn btn-success">{{ tr["resume"] if tr else "Resume" }}</button>
+    <button id="btn-snapshot" class="btn btn-primary">{{ tr["snapshot"] if tr else "Snapshot" }}</button>
   </div>
 
-<!-- Steuerung -->
-<div class="d-flex justify-content-center mb-3 gap-3">
-  <button id="btn-pause" class="btn btn-warning">{{ tr["pause"] if tr else "Pause" }}</button>
-  <button id="btn-resume" class="btn btn-success">{{ tr["resume"] if tr else "Resume" }}</button>
-  <button id="btn-snapshot" class="btn btn-primary">{{ tr["snapshot"] if tr else "Snapshot" }}</button>
-</div>
+  <!-- Infos: 3 Spalten ({{ tr["time"] if tr else "Time" }}/Bilder | Start/Ende | {{ tr["sunrise"] if tr else "Sunrise" }}/-untergang) -->
+  <div class="row justify-content-center mb-3">
+    <div class="col-md-10">
+      <div class="card shadow-sm p-3 bg-body-tertiary">
+        <div class="row text-center align-items-center">
+          <!-- Spalte 1: {{ tr["time"] if tr else "Time" }} & {{ tr["saved_images"] if tr else "Saved Images" }} -->
+          <div class="col-12 col-md-4 mb-3 mb-md-0">
+            <div class="fw-bold"><i class="fa-solid fa-clock me-1"></i>{{ tr["time"] if tr else "Time" }}</div>
+            <div id="time">--:--</div>
+            <div class="fw-bold mt-3"><i class="fa-solid fa-images me-1"></i>{{ tr["saved_images"] if tr else "Saved Images" }}</div>
+            <div id="count">0</div>
+          </div>
 
-<!-- Infos: 3 Spalten ({{ tr["time"] if tr else "Time" }}/Bilder | Start/Ende | {{ tr["sunrise"] if tr else "Sunrise" }}/-untergang) -->
-<div class="row justify-content-center mb-3">
-  <div class="col-md-10">
-    <div class="card shadow-sm p-3 bg-body-tertiary">
-      <div class="row text-center align-items-center">
-        <!-- Spalte 1: {{ tr["time"] if tr else "Time" }} & {{ tr["saved_images"] if tr else "Saved Images" }} -->
-        <div class="col-12 col-md-4 mb-3 mb-md-0">
-          <div class="fw-bold"><i class="fa-solid fa-clock me-1"></i>{{ tr["time"] if tr else "Time" }}</div>
-          <div id="time">--:--</div>
-          <div class="fw-bold mt-3"><i class="fa-solid fa-images me-1"></i>{{ tr["saved_images"] if tr else "Saved Images" }}</div>
-          <div id="count">0</div>
-        </div>
+          <!-- Spalte 2: Start-/{{ tr["end_time"] if tr else "End Time" }} -->
+          <div class="col-12 col-md-4 mb-3 mb-md-0">
+            <div class="fw-bold"><i class="fa-solid fa-play me-1"></i>{{ tr["start_time"] if tr else "Start Time" }}</div>
+            <div id="start-time">{{ cfg.active_start }}</div>
+            <div class="fw-bold mt-3"><i class="fa-solid fa-stop me-1"></i>{{ tr["end_time"] if tr else "End Time" }}</div>
+            <div id="end-time">{{ cfg.active_end }}</div>
+          </div>
 
-        <!-- Spalte 2: Start-/{{ tr["end_time"] if tr else "End Time" }} -->
-        <div class="col-12 col-md-4 mb-3 mb-md-0">
-          <div class="fw-bold"><i class="fa-solid fa-play me-1"></i>{{ tr["start_time"] if tr else "Start Time" }}</div>
-          <div id="start-time">{{ cfg.active_start }}</div>
-          <div class="fw-bold mt-3"><i class="fa-solid fa-stop me-1"></i>{{ tr["end_time"] if tr else "End Time" }}</div>
-          <div id="end-time">{{ cfg.active_end }}</div>
-        </div>
-
-        <!-- Spalte 3: {{ tr["sunrise"] if tr else "Sunrise" }} & {{ tr["sunset"] if tr else "Sunset" }} -->
-        <div class="col-12 col-md-4">
-          <div class="fw-bold"><i class="fa-solid fa-sun me-1"></i>{{ tr["sunrise"] if tr else "Sunrise" }}</div>
-          <div id="sunrise">--:--</div>
-          <div class="fw-bold mt-3"><i class="fa-solid fa-moon me-1"></i>{{ tr["sunset"] if tr else "Sunset" }}</div>
-          <div id="sunset">--:--</div>
+          <!-- Spalte 3: {{ tr["sunrise"] if tr else "Sunrise" }} & {{ tr["sunset"] if tr else "Sunset" }} -->
+          <div class="col-12 col-md-4">
+            <div class="fw-bold"><i class="fa-solid fa-sun me-1"></i>{{ tr["sunrise"] if tr else "Sunrise" }}</div>
+            <div id="sunrise">--:--</div>
+            <div class="fw-bold mt-3"><i class="fa-solid fa-moon me-1"></i>{{ tr["sunset"] if tr else "Sunset" }}</div>
+            <div id="sunset">--:--</div>
+          </div>
         </div>
       </div>
     </div>
   </div>
+
 </div>
+{% endblock %}
 
-
-<script>
-  const es = new EventSource('/events');
-  const latestImg = document.getElementById('latest-img');
-  const lastTime = document.getElementById('last-time');
-  const camErr = document.getElementById('cam-error');
-  const statusIcon = document.getElementById('status-icon');
-  const statusText = document.getElementById('status-text');
-  const timeEl = document.getElementById('time');
-  const sunriseEl = document.getElementById('sunrise');
-  const sunsetEl = document.getElementById('sunset');
-  const countEl = document.getElementById('count');
-  let imageCount = 0;
-  let statusRevertTimer = null;
-
-  // Localized UI strings injected by Jinja
-  const LAST_IMAGE_LABEL = {{ (tr['last_image_label'] if tr else 'Last image') | tojson }};
-  const CAMERA_ERROR_PREFIX = {{ (tr['camera_error_prefix'] if tr else 'Camera error') | tojson }};
-  const CAMERA_ERROR_MESSAGES = {
-    snapshot_failed: {{ (tr['camera_error_snapshot_failed'] if tr else 'Snapshot failed') | tojson }}
-  };
-  const EMPTY_TIME = "--:--:--";
-
-  function updateCameraError(errorInfo) {
-    if (!camErr) return;
-    if (errorInfo) {
-      const detail = (errorInfo.code && CAMERA_ERROR_MESSAGES[errorInfo.code]) || errorInfo.message || '';
-      camErr.textContent = CAMERA_ERROR_PREFIX + (detail ? ': ' + detail : '');
-      camErr.style.display = 'block';
-    } else {
-      camErr.textContent = '';
-      camErr.style.display = 'none';
-    }
-  }
-
-  function clearStatusRevert() {
-    if (statusRevertTimer) {
-      clearTimeout(statusRevertTimer);
-      statusRevertTimer = null;
-    }
-  }
-
-  function scheduleStatusRevert(ms = 5000) {
-    clearStatusRevert();
-    statusRevertTimer = setTimeout(() => {
-      fetchStatus();
-      statusRevertTimer = null;
-    }, ms);
-  }
-
-  function bust(u) { return u + (u.includes('?') ? '&' : '?') + 't=' + Date.now(); }
-
-  // {{ tr["time"] if tr else "Time" }} lokal anzeigen (nur Stunden:Minuten)
-  setInterval(() => {
-    const now = new Date();
-    timeEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }, 1000);
-
-
-  // Initialstatus vom Server laden
-  async function fetchStatus() {
-    try {
-      const res = await fetch('/status');
-      const d = await res.json();
-      sunriseEl.textContent = d.sunrise || '--:--';
-      sunsetEl.textContent = d.sunset || '--:--';
-      imageCount = d.count || 0;
-      countEl.textContent = imageCount;
-      if (lastTime) {
-        lastTime.textContent = LAST_IMAGE_LABEL + ": " + (d.last_snapshot || EMPTY_TIME);
-        lastTime.style.display = '';
-      }
-      updateCameraError(d.camera_error || null);
-      if (d.paused === true) {
-        statusText.textContent = {{ (tr['paused'] if tr else 'Recording paused') | tojson }};
-      } else if (d.active === true) {
-        statusText.textContent = {{ (tr['running'] if tr else 'Recording running') | tojson }};
-      } else {
-        statusText.textContent = {{ (tr['waiting_window'] if tr else 'Waiting for active time window') | tojson }};
-      }
-    } catch (err) {
-      console.warn("Status konnte nicht geladen werden", err);
-    }
-  }
-  fetchStatus();
-
-  // SSE-Handler
-  es.onmessage = e => {
-    try {
-      const d = JSON.parse(e.data);
-
-      // Neues Bild empfangen
-      if (d.type === 'snapshot' && d.filename) {
-        imageCount++;
-        countEl.textContent = imageCount;
-        latestImg.src = bust('/static/img/last.jpg');
-        latestImg.style.display = '';
-        if (lastTime) {
-          lastTime.textContent = LAST_IMAGE_LABEL + ": " + (d.timestamp || EMPTY_TIME);
-          lastTime.style.display = '';
-        }
-        updateCameraError(null);
-        if (statusIcon) statusIcon.textContent = '';
-        statusText.textContent = {{ (tr['last_image_success'] if tr else 'Last image captured successfully') | tojson }};
-        scheduleStatusRevert(5000);
-      }
-
-      // Statusänderungen
-      if (d.type === 'status') {
-        let needsRevert = false;
-        if (statusIcon) statusIcon.textContent = '';
-        if (d.status === 'paused') {
-          statusText.textContent = {{ (tr['paused'] if tr else 'Recording paused') | tojson }};
-        } else if (d.status === 'running') {
-          statusText.textContent = {{ (tr['running'] if tr else 'Recording running') | tojson }};
-        } else if (d.status === 'waiting_window') {
-          statusText.textContent = {{ (tr['waiting_window'] if tr else 'Waiting for active time window') | tojson }};
-        } else if (d.status === 'config_reloaded') {
-          statusText.textContent = {{ (tr['config_reloaded'] if tr else 'Configuration reloaded') | tojson }};
-          needsRevert = true;
-        }
-        if (needsRevert) {
-          scheduleStatusRevert(5000);
-        } else {
-          clearStatusRevert();
-        }
-      }
-
-      // Kamera-Fehler
-      if (d.type === 'camera_error') {
-        updateCameraError({ code: d.code, message: d.message });
-        if (statusIcon) statusIcon.textContent = '';
-        statusText.textContent = {{ (tr['camera_error'] if tr else 'Camera access error') | tojson }};
-        scheduleStatusRevert(8000);
-      }
-
-    } catch (err) {
-      console.warn('SSE parse error', e.data);
-    }
-  };
-
-  // Fallback: alle 30 Sekunden Bild aktualisieren, falls kein SSE kam
-  setInterval(() => {
-    latestImg.src = bust('/static/img/last.jpg');
-  }, 30000);
-
-  // Buttons
-  document.getElementById('btn-pause').onclick = () => {
-    fetch('/action/pause', { method: 'POST' });
-  };
-  document.getElementById('btn-resume').onclick = () => {
-    fetch('/action/resume', { method: 'POST' });
-  };
-  document.getElementById('btn-snapshot').onclick = () => {
-    fetch('/action/snapshot', { method: 'POST' });
-  };
-</script>
-
+{% block scripts %}
+<script src="{{ url_for('static', path='js/dashboard.js') }}"></script>
 {% endblock %}
