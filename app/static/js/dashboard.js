@@ -47,21 +47,28 @@
 
   const bust = (u) => `${u}${u.includes('?') ? '&' : '?'}t=${Date.now()}`;
 
-  const formatTimestampTooltip = (timestamp) => {
-    if (!timestamp) return '';
-    const parsed = new Date(timestamp);
+  const formatTimestampTooltip = (value) => {
+    if (!value) return '';
+    // If already in DD.MM.YY HH:MM (or similar), just return it.
+    if (/^\d{2}\.\d{2}\.\d{2}\s+\d{2}:\d{2}/.test(value)) return value;
+    const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) {
-      // If parsing fails, fall back to showing the raw timestamp in the tooltip.
-      return timestamp;
+      return value; // Fallback: show raw value
     }
-    return `${parsed.toLocaleDateString()} ${parsed.toLocaleTimeString()}`;
+    return parsed.toLocaleString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
-  const updateLastTime = (timestamp) => {
+  const updateLastTime = (timestamp, tooltipValue) => {
     if (!els.lastTime) return;
     els.lastTime.textContent = `${messages.lastLabel}: ${timestamp || EMPTY_TIME}`;
     els.lastTime.style.display = '';
-    const tooltip = formatTimestampTooltip(timestamp);
+    const tooltip = formatTimestampTooltip(tooltipValue || timestamp);
     if (tooltip) {
       els.lastTime.setAttribute('title', tooltip);
     } else {
@@ -113,10 +120,11 @@
       }
 
       const newSnapshot = data.last_snapshot || null;
+      const newSnapshotTooltip = data.last_snapshot_tooltip || newSnapshot;
       const snapshotChanged = newSnapshot && newSnapshot !== lastSnapshot;
       lastSnapshot = newSnapshot;
 
-      updateLastTime(newSnapshot);
+      updateLastTime(newSnapshot, newSnapshotTooltip);
 
       if (syncImage && snapshotChanged) {
         refreshImage();
@@ -140,12 +148,12 @@
     }
   }
 
-  function handleSnapshotUpdate(timestamp) {
+  function handleSnapshotUpdate(timestamp, fullTimestamp) {
     imageCount += 1;
     if (els.count) els.count.textContent = imageCount;
     if (timestamp) lastSnapshot = timestamp;
     refreshImage();
-    updateLastTime(timestamp);
+    updateLastTime(timestamp, fullTimestamp);
     updateCameraError(null);
     setStatus(messages.statusLastSuccess, 5000);
   }
@@ -196,7 +204,7 @@
       try {
         const payload = JSON.parse(event.data);
         if (payload.type === 'snapshot' && payload.filename) {
-          handleSnapshotUpdate(payload.timestamp);
+          handleSnapshotUpdate(payload.timestamp, payload.timestamp_full);
         }
 
         if (payload.type === 'status') {
