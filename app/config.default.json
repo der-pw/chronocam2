@@ -22,5 +22,6 @@
   "city_tz": "Europe/Berlin",
   "log_file": null,
   "log_enabled": true,
-  "language": "en"
+  "language": "en",
+  "paused": false
 }

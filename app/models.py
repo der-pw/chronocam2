@@ -16,6 +16,8 @@ class ConfigModel(BaseModel):
     active_end: str = Field("18:00", description="Endzeit (HH:MM)")
     active_days: List[str] = Field(default_factory=lambda: ["Mon", "Tue", "Wed", "Thu", "Fri"])
 
+    paused: bool = Field(False, description="Scheduler-Status: pausiert ja/nein")
+
     use_astral: bool = Field(False, description="Sonnenauf-/untergang verwenden")
     city_lat: float = Field(52.52, description="Breitengrad")
     city_lon: float = Field(13.405, description="Längengrad")
