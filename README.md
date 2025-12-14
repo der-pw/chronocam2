@@ -16,7 +16,9 @@
 ChronoCam2 is a tool for automatically capturing images from a webcam at regular intervals. Users can define the recording schedule - including specific days, time ranges, or daylight-only operation - making it ideal for outdoor time-lapse documentation, such as construction site monitoring. Its primary purpose is to simplify long-term visual tracking by automating image capture and organization.
 
 ## Project Layout
-- `app/` — Application code
+- `app/` — Application code (FastAPI + templates + static assets)
+- `app/static/js/` — Frontend scripts (shared helpers, dashboard, settings)
+- `app/templates/` — Jinja2 templates for pages
 - `app/config.json` — Runtime configuration
 
 ## Quickstart
@@ -43,6 +45,12 @@ ChronoCam2 is a tool for automatically capturing images from a webcam at regular
 - `GET /status` — JSON status for UI
 - `POST /update` — Save settings (form submit)
 - `POST /action/{pause|resume|snapshot}` — Control actions
+
+### Frontend behavior
+- Dashboard uses **Server-Sent Events** for live status updates with automatic reconnection and falls back to periodic polling when needed.
+- Action buttons (`Pause`, `Resume`, `Snapshot`) call the API via `fetch` and surface inline success/error alerts without a page reload.
+- Settings are saved via AJAX (`fetch` on the settings form) so inline validation messages appear without navigating away from the page.
+- Shared helpers for fetch + alerts live in `app/static/js/app.js`, while page-specific logic is in `dashboard.js` and `settings.js`.
 
 ## Configuration
 - File: `app/config.json`
