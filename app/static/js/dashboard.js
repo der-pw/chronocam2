@@ -51,10 +51,22 @@
     if (!value) return '';
     // If already in DD.MM.YY HH:MM (or similar), just return it.
     if (/^\d{2}\.\d{2}\.\d{2}\s+\d{2}:\d{2}/.test(value)) return value;
-    const parsed = new Date(value);
+
+    // If we only got a time, combine with today's date for a minimal tooltip.
+    const timeOnlyMatch = /^(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value);
+    let parsed;
+    if (timeOnlyMatch) {
+      const now = new Date();
+      const [_, hh, mm, ss] = timeOnlyMatch;
+      parsed = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(hh), Number(mm), Number(ss || 0));
+    } else {
+      parsed = new Date(value);
+    }
+
     if (Number.isNaN(parsed.getTime())) {
       return value; // Fallback: show raw value
     }
+
     return parsed.toLocaleString('de-DE', {
       day: '2-digit',
       month: '2-digit',
