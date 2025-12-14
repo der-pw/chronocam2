@@ -9,14 +9,14 @@ from app.downloader import take_snapshot
 from app.logger_utils import log
 from app.broadcast_manager import broadcast
 from app.sunrise_utils import is_within_time_range, get_sun_times
-from app.config_manager import load_config
+from app.config_manager import load_config, save_config
 from app.runtime_state import set_camera_error, clear_camera_error
 
 # Globale Variablen
 scheduler = None
 cfg = load_config()
 cfg_lock = asyncio.Lock()
-is_paused = False
+is_paused = getattr(cfg, "paused", False)
 STATUS_HEARTBEAT_SECONDS = 10
 
 
@@ -186,9 +186,19 @@ def stop_scheduler():
 
 
 # === Pause/Resume steuern ===
-def set_paused(value: bool) -> None:
-    """Setzt den pausiert-Status des Schedulers."""
-    global is_paused
-    is_paused = bool(value)
+async def set_paused(value: bool, *, persist: bool = True) -> None:
+    """Setzt den pausiert-Status des Schedulers und speichert optional die Config."""
+    global cfg, is_paused
+
+    async with cfg_lock:
+        is_paused = bool(value)
+        if hasattr(cfg, "paused"):
+            cfg.paused = is_paused
+        if persist:
+            try:
+                save_config(cfg)
+            except Exception as exc:  # pragma: no cover - Logging reicht hier
+                log("warn", f"Pause-Status konnte nicht gespeichert werden: {exc}")
+
     state = "pausiert" if is_paused else "fortgesetzt"
     log("info", f"Scheduler {state}")

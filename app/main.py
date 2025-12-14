@@ -201,14 +201,14 @@ async def status():
 # === Action-Routen ===
 @app.post("/action/pause")
 async def action_pause():
-    set_paused(True)
+    await set_paused(True)
     await broadcast({"type": "status", "status": "paused"})
     return {"ok": True}
 
 
 @app.post("/action/resume")
 async def action_resume():
-    set_paused(False)
+    await set_paused(False)
     await broadcast({"type": "status", "status": "running"})
     return {"ok": True}
 

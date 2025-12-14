@@ -65,6 +65,7 @@ ChronoCam2 is a tool for automatically capturing images from a webcam at regular
   - `use_astral`: bool; restrict by sunrise/sunset
   - `city_lat` / `city_lon` / `city_tz`: location settings
   - `language`: `de` or `en` (templates/i18n)
+  - `paused`: bool; persists pause/resume state across restarts
 
 
 ## Docker Compose
