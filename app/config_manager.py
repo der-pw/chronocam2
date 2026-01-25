@@ -42,9 +42,26 @@ PICTURES_DIR = _resolve_pictures_dir()  # Default root for snapshots
 def _harmonize_default_config(default_data: dict) -> dict:
     data = dict(default_data)
     save_path = data.get("save_path")
+    env_pictures = os.getenv("CHRONOCAM_PICTURES_DIR")
+    if env_pictures:
+        # If an explicit pictures dir is provided, persist it to avoid confusion.
+        data["save_path"] = str(PICTURES_DIR)
+        return data
     if isinstance(save_path, str) and save_path == "/pictures" and DATA_DIR != Path("/data"):
         data["save_path"] = "./pictures"
     return data
+
+
+def _harmonize_existing_config(data: dict) -> tuple[dict, bool]:
+    """Adjust config values that should reflect environment overrides."""
+    updated = False
+    env_pictures = os.getenv("CHRONOCAM_PICTURES_DIR")
+    if env_pictures:
+        save_path = data.get("save_path")
+        if isinstance(save_path, str) and save_path.strip() in ("./pictures", "pictures", "/pictures"):
+            data["save_path"] = str(PICTURES_DIR)
+            updated = True
+    return data, updated
 
 
 def resolve_save_dir(save_path: Optional[str]) -> Path:
@@ -75,6 +92,13 @@ def load_config() -> ConfigModel:
     if CONFIG_PATH.exists():
         try:
             data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+            data, updated = _harmonize_existing_config(data)
+            if updated:
+                CONFIG_PATH.write_text(
+                    json.dumps(data, indent=2, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+                print("[INFO] Config updated to reflect ENV overrides:", CONFIG_PATH)
             return ConfigModel(**data)
         except Exception as e:
             print(f"[WARN] Failed to load config: {e}")
