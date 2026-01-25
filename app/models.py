@@ -5,6 +5,7 @@ from datetime import time
 
 class ConfigModel(BaseModel):
     """Global app configuration (replaces the former INI file)."""
+    instance_name: Optional[str] = Field(None, description="Optional instance name override")
     cam_url: str = Field("", description="Webcam snapshot URL")
     username: Optional[str] = Field(None, description="Camera username")
     password: Optional[str] = Field(None, description="Camera password")

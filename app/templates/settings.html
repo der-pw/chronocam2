@@ -17,10 +17,14 @@ endblock %}
 <form id="settings-form" method="post" action="/update" class="mt-3"
       data-save-success="{{ tr.get('settings_saved', 'Einstellungen gespeichert') if tr else 'Einstellungen gespeichert' }}"
       data-save-error="{{ tr.get('settings_save_failed', 'Speichern fehlgeschlagen') if tr else 'Speichern fehlgeschlagen' }}">
-  <!-- Language -->
-  <h5 class="mb-2"><i class="fa-solid fa-language me-2"></i>{{ tr['language'] if tr else 'Sprache' }}</h5>
+  <!-- Main -->
+  <h5 class="mb-2">{{ tr["main"] if tr else "Main" }}</h5>
   <div class="row g-3 mb-3">
-    <div class="col-md-3">
+    <div class="col-md-7">
+      <label class="form-label">{{ tr["instance_name"] if tr else "Instance Name" }}</label>
+      <input class="form-control" name="INSTANCE_NAME" value="{{ cfg.instance_name or '' }}" maxlength="80">
+    </div>
+    <div class="col-md-3 ms-md-auto">
       <label class="form-label">{{ tr['language'] if tr else 'Sprache' }}</label>
       <select class="form-select" name="LANGUAGE">
         {% for code in (langs or []) %}
@@ -167,6 +171,10 @@ endblock %}
       else "Save" }}</button>
   </div>
 </form>
+
+<div class="mt-4 pt-3 border-top text-muted small d-flex flex-wrap gap-3 justify-content-between align-items-center">
+  <div><a href="https://github.com/der-pw/chronocam2" target="_blank" rel="noopener noreferrer">{{ tr['app_name'] if tr else 'ChronoCam2' }}</a> · {{ app_version }}</div>
+</div>
 {% endblock %}
 
 {% block scripts %}

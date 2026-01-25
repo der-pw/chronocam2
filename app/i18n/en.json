@@ -1,5 +1,7 @@
 {
-  "app_name": "ChronoCam",
+  "app_name": "ChronoCam2",
+  "instance_name": "Instance Name",
+  "main": "Main",
   "nav_dashboard": "Dashboard",
   "nav_settings": "Settings",
   "dashboard_title": "Dashboard",

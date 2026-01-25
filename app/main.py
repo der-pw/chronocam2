@@ -33,7 +33,7 @@ app.mount(
 )
 
 # === Templates ===
-APP_VERSION = "v2.2_beta"
+APP_VERSION = "2.2.1"
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["app_version"] = APP_VERSION
 
@@ -108,6 +108,7 @@ async def settings_page(request: Request):
 async def update_settings(
     request: Request,
     CAM_URL: str = Form(...),
+    INSTANCE_NAME: str = Form(""),
     INTERVAL_SECONDS: int = Form(...),
     SAVE_PATH: str = Form(...),
     AUTH_TYPE: str = Form("none"),
@@ -125,6 +126,7 @@ async def update_settings(
     """Persist settings and redirect back to /settings with a success flag."""
     async with cfg_lock:
         cfg.cam_url = CAM_URL
+        cfg.instance_name = INSTANCE_NAME.strip() or None
         cfg.interval_seconds = INTERVAL_SECONDS
         cfg.save_path = SAVE_PATH
         cfg.auth_type = AUTH_TYPE
