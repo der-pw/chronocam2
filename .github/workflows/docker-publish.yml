@@ -32,7 +32,7 @@ jobs:
           from pathlib import Path
 
           text = Path("app/main.py").read_text(encoding="utf-8")
-          match = re.search(r'APP_VERSION\\s*=\\s*["\\\']([^"\\\']+)["\\\']', text)
+          match = re.search(r'APP_VERSION\s*=\s*["\']([^"\']+)["\']', text)
           if not match:
             raise SystemExit("APP_VERSION not found in app/main.py")
           version = match.group(1)
