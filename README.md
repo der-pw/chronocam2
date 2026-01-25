@@ -131,4 +131,4 @@ Preparation notes:
 
 
 ## License
-This project uses the MIT License. See `LICENSE` for details. If you prefer a different license (Apache-2.0, GPL-3.0, etc.), replace the file accordingly.
+This project uses the MIT License. See `LICENSE` for details.
