@@ -35,7 +35,6 @@
     statusReconnecting: root.dataset.statusReconnecting || 'Reconnecting to live updates …',
     statusFailed: root.dataset.statusFailed || 'Status could not be loaded',
     actionError: root.dataset.actionError || 'Action failed',
-    actionSuccess: root.dataset.actionSuccess || 'Action completed',
   };
 
   const EMPTY_TIME = '--:--:--';
@@ -237,7 +236,11 @@
     if (btn) btn.disabled = true;
     try {
       await fetchJson(`/action/${path}`, { method: 'POST' }, { timeoutMs: 15000 });
-      setStatus(messages.actionSuccess, 3000);
+      if (path === 'pause') {
+        setStatus(messages.statusPaused);
+      } else if (path === 'resume') {
+        setStatus(messages.statusRunning);
+      }
     } catch (err) {
       console.warn(`Action ${path} failed`, err);
       setStatus(messages.actionError, 4000);
