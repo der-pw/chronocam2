@@ -36,7 +36,7 @@ jobs:
           match = re.search(r'APP_VERSION\s*=\s*["\']([^"\']+)["\']', text)
           if not match:
             raise SystemExit("APP_VERSION not found in app/main.py")
-          version = match.group(1)
+          version = match.group(1).strip()
           if not version:
             raise SystemExit("APP_VERSION is empty")
           print(f"Found APP_VERSION={version}")
