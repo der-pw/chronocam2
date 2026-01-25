@@ -29,6 +29,7 @@ jobs:
         run: |
           python - <<'PY'
           import re
+          import os
           from pathlib import Path
 
           text = Path("app/main.py").read_text(encoding="utf-8")
@@ -36,8 +37,10 @@ jobs:
           if not match:
             raise SystemExit("APP_VERSION not found in app/main.py")
           version = match.group(1)
+          if not version:
+            raise SystemExit("APP_VERSION is empty")
           print(f"Found APP_VERSION={version}")
-          with open("${GITHUB_OUTPUT}", "a", encoding="utf-8") as fh:
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
             fh.write(f"version={version}\\n")
           PY
         shell: bash
