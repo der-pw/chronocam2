@@ -8,7 +8,16 @@
 }
 
 #latest-img {
-  /*max-height: 650px;*/
+  width: 100%;
+  height: auto;
+  max-height: 55vh;
+  object-fit: contain;
+}
+
+@media (min-width: 1400px) {
+  #latest-img {
+    max-height: 70vh;
+  }
 }
 
 .image-wrap {

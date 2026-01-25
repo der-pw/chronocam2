@@ -24,6 +24,24 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      - name: Extract APP_VERSION
+        id: app_version
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          text = Path("app/main.py").read_text(encoding="utf-8")
+          match = re.search(r'APP_VERSION\\s*=\\s*["\\\']([^"\\\']+)["\\\']', text)
+          if not match:
+            raise SystemExit("APP_VERSION not found in app/main.py")
+          version = match.group(1)
+          print(f"Found APP_VERSION={version}")
+          with open("${GITHUB_OUTPUT}", "a", encoding="utf-8") as fh:
+            fh.write(f"version={version}\\n")
+          PY
+        shell: bash
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
@@ -32,5 +50,6 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/chronocam2:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/chronocam2:${{ github.sha }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/chronocam2:${{ steps.app_version.outputs.version }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
