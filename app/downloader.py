@@ -7,6 +7,15 @@ from app.logger_utils import log
 from app.config_manager import resolve_save_dir
 
 
+def _build_auth(cfg):
+    """Return requests auth based on config."""
+    if cfg.auth_type == "basic" and cfg.username and cfg.password:
+        return HTTPBasicAuth(cfg.username, cfg.password)
+    if cfg.auth_type == "digest" and cfg.username and cfg.password:
+        return HTTPDigestAuth(cfg.username, cfg.password)
+    return None
+
+
 def take_snapshot(cfg):
     """Download a snapshot from the camera and store it locally."""
     if not cfg.cam_url:
@@ -23,13 +32,9 @@ def take_snapshot(cfg):
         filepath = save_dir / filename
 
         # Select auth method based on config
-        auth = None
-        if cfg.auth_type == "basic" and cfg.username and cfg.password:
-            auth = HTTPBasicAuth(cfg.username, cfg.password)
-            log("info", "Using HTTP Basic Auth.")
-        elif cfg.auth_type == "digest" and cfg.username and cfg.password:
-            auth = HTTPDigestAuth(cfg.username, cfg.password)
-            log("info", "Using HTTP Digest Auth.")
+        auth = _build_auth(cfg)
+        if auth:
+            log("info", f"Using HTTP {cfg.auth_type.title()} Auth.")
         else:
             log("info", "No authentication used.")
 
@@ -66,3 +71,26 @@ def take_snapshot(cfg):
     except Exception as e:
         log("error", f"Snapshot failed: {e}")
         return None
+
+
+def check_camera_health(cfg):
+    """Lightweight healthcheck for the camera endpoint."""
+    if not cfg.cam_url:
+        return {"ok": False, "code": "no_url", "message": "No camera URL configured"}
+
+    auth = _build_auth(cfg)
+
+    try:
+        # Prefer HEAD to avoid downloading the full snapshot; fall back to GET if needed.
+        resp = requests.head(cfg.cam_url, auth=auth, timeout=5, allow_redirects=True)
+        if resp.status_code in (405, 501):
+            resp = requests.get(cfg.cam_url, auth=auth, timeout=5, stream=True, allow_redirects=True)
+            # Read a single chunk to confirm reachability
+            next(resp.iter_content(chunk_size=1024), None)
+            resp.close()
+        status = resp.status_code
+        if status < 400:
+            return {"ok": True, "code": str(status), "message": "Camera reachable"}
+        return {"ok": False, "code": str(status), "message": f"HTTP {status}"}
+    except Exception as e:
+        return {"ok": False, "code": "exception", "message": str(e)}

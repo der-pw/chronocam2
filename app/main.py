@@ -14,12 +14,14 @@ from app.scheduler import start_scheduler, stop_scheduler, cfg_lock, cfg, set_pa
 from app import i18n
 from app.broadcast_manager import clients, broadcast
 from app.logger_utils import log
-from app.downloader import take_snapshot
+from app.downloader import take_snapshot, check_camera_health
 from app.sunrise_utils import get_sun_times
 from app.runtime_state import (
     set_camera_error,
     clear_camera_error,
     get_camera_error,
+    set_camera_health,
+    get_camera_health,
 )
 
 # === FastAPI App ===
@@ -33,7 +35,7 @@ app.mount(
 )
 
 # === Templates ===
-APP_VERSION = "2.2.2"
+APP_VERSION = "2.2.3"
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["app_version"] = APP_VERSION
 
@@ -145,6 +147,21 @@ async def update_settings(
 
     stop_scheduler()
     start_scheduler()
+    # Run a quick healthcheck after saving to provide immediate feedback
+    health = await asyncio.to_thread(check_camera_health, cfg)
+    checked_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if health.get("ok"):
+        clear_camera_error()
+        set_camera_health("ok", health.get("code"), health.get("message", "OK"), checked_at)
+    else:
+        set_camera_health("error", health.get("code"), health.get("message", "Error"), checked_at)
+    await broadcast({
+        "type": "camera_health",
+        "status": "ok" if health.get("ok") else "error",
+        "code": health.get("code"),
+        "message": health.get("message"),
+        "checked_at": checked_at,
+    })
     await broadcast({"type": "status", "status": "config_reloaded"})
     log("info", "Config saved and scheduler restarted")
 
@@ -202,7 +219,8 @@ async def status():
         "count": count,
         "last_snapshot": last_snapshot_ts,
         "last_snapshot_tooltip": last_snapshot_full,
-        "camera_error": get_camera_error()
+        "camera_error": get_camera_error(),
+        "camera_health": get_camera_health(),
     }
 
 

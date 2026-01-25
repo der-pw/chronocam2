@@ -14,7 +14,6 @@
   const els = {
     latestImg: qs('latest-img'),
     lastTime: qs('last-time'),
-    camErr: qs('cam-error'),
     statusText: qs('status-text'),
     time: qs('time'),
     sunrise: qs('sunrise'),
@@ -43,6 +42,8 @@
   let statusRevertTimer = null;
   let es = null;
   let esRetryDelay = 2000;
+  let cameraErrorActive = false;
+  let cameraErrorSource = null; // 'snapshot' | 'health'
 
   const bust = (u) => `${u}${u.includes('?') ? '&' : '?'}t=${Date.now()}`;
 
@@ -86,9 +87,10 @@
     }
   };
 
-  function setStatus(message, revertMs) {
+  function setStatus(message, revertMs, isError = false) {
     if (!els.statusText) return;
     els.statusText.textContent = message || '';
+    els.statusText.classList.toggle('text-danger', Boolean(isError));
     if (statusRevertTimer) {
       clearTimeout(statusRevertTimer);
       statusRevertTimer = null;
@@ -100,17 +102,16 @@
     }
   }
 
-  function updateCameraError(errorInfo) {
-    if (!els.camErr) return;
-    if (errorInfo) {
-      const detail = (errorInfo.code === 'snapshot_failed' && messages.cameraErrorSnapshot) || errorInfo.message || '';
-      const suffix = detail ? `: ${detail}` : '';
-      els.camErr.textContent = `${messages.cameraErrorPrefix}${suffix}`;
-      els.camErr.style.display = 'block';
-    } else {
-      els.camErr.textContent = '';
-      els.camErr.style.display = 'none';
-    }
+  function formatCameraError(errorInfo) {
+    if (!errorInfo) return '';
+    const detail = (errorInfo.code === 'snapshot_failed' && messages.cameraErrorSnapshot) || errorInfo.message || '';
+    const suffix = detail ? `: ${detail}` : '';
+    return `${messages.cameraErrorPrefix}${suffix}`;
+  }
+
+  function formatCameraHealth(healthInfo) {
+    if (!healthInfo || healthInfo.status !== 'error') return '';
+    return `${messages.cameraErrorPrefix}: ${messages.cameraErrorSnapshot}`;
   }
 
   function refreshImage() {
@@ -143,18 +144,32 @@
       if (els.sunrise) els.sunrise.textContent = data.sunrise || '--:--';
       if (els.sunset) els.sunset.textContent = data.sunset || '--:--';
 
-      if (data.paused === true) {
+      const cameraErrorMsg = formatCameraError(data.camera_error || null);
+      const cameraHealthMsg = formatCameraHealth(data.camera_health || null);
+      if (cameraErrorMsg) {
+        cameraErrorActive = true;
+        cameraErrorSource = 'snapshot';
+        setStatus(cameraErrorMsg, null, true);
+      } else if (cameraHealthMsg) {
+        cameraErrorActive = true;
+        cameraErrorSource = 'health';
+        setStatus(cameraHealthMsg, null, true);
+      } else if (data.paused === true) {
+        cameraErrorActive = false;
+        cameraErrorSource = null;
         setStatus(messages.statusPaused);
       } else if (data.active === true) {
+        cameraErrorActive = false;
+        cameraErrorSource = null;
         setStatus(messages.statusRunning);
       } else {
+        cameraErrorActive = false;
+        cameraErrorSource = null;
         setStatus(messages.statusWaiting);
       }
-
-      updateCameraError(data.camera_error || null);
     } catch (err) {
       console.warn('Status could not be loaded', err);
-      setStatus(messages.statusFailed);
+      setStatus(messages.statusFailed, null, true);
     }
   }
 
@@ -164,12 +179,13 @@
     if (timestamp) lastSnapshot = timestamp;
     refreshImage();
     updateLastTime(timestamp, fullTimestamp);
-    updateCameraError(null);
+    cameraErrorActive = false;
+    cameraErrorSource = null;
     setStatus(messages.statusLastSuccess, 5000);
   }
 
   function handleStatusUpdate(status) {
-    if (!status) return;
+    if (!status || cameraErrorActive) return;
     let revert = false;
     if (status === 'paused') {
       setStatus(messages.statusPaused);
@@ -222,8 +238,22 @@
         }
 
         if (payload.type === 'camera_error') {
-          updateCameraError({ code: payload.code, message: payload.message });
-          setStatus(messages.statusCameraError, 8000);
+          const cameraMsg = formatCameraError({ code: payload.code, message: payload.message }) || messages.statusCameraError;
+          cameraErrorActive = true;
+          cameraErrorSource = 'snapshot';
+          setStatus(cameraMsg, 8000, true);
+        }
+        if (payload.type === 'camera_health') {
+          const healthMsg = formatCameraHealth(payload);
+          if (healthMsg) {
+            cameraErrorActive = true;
+            cameraErrorSource = 'health';
+            setStatus(healthMsg, null, true);
+          } else if (cameraErrorActive && cameraErrorSource === 'health') {
+            cameraErrorActive = false;
+            cameraErrorSource = null;
+            fetchStatus();
+          }
         }
       } catch (err) {
         console.warn('SSE parse error', event.data);

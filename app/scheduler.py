@@ -5,12 +5,12 @@ from pathlib import Path
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
-from app.downloader import take_snapshot
+from app.downloader import take_snapshot, check_camera_health
 from app.logger_utils import log
 from app.broadcast_manager import broadcast
 from app.sunrise_utils import is_within_time_range, get_sun_times
 from app.config_manager import load_config, save_config, resolve_save_dir
-from app.runtime_state import set_camera_error, clear_camera_error
+from app.runtime_state import set_camera_error, clear_camera_error, set_camera_health
 
 # Global state
 scheduler = None
@@ -18,6 +18,7 @@ cfg = load_config()
 cfg_lock = asyncio.Lock()
 is_paused = getattr(cfg, "paused", False)
 STATUS_HEARTBEAT_SECONDS = 10
+CAMERA_HEALTHCHECK_SECONDS = 60
 
 
 # === Check whether we are inside the capture window ===
@@ -146,6 +147,28 @@ def job_status_heartbeat():
         log("error", f"Failed to send status heartbeat: {err}")
 
 
+def job_camera_healthcheck():
+    """Periodically check camera reachability without taking a snapshot."""
+    local_cfg = cfg
+    result = check_camera_health(local_cfg)
+    checked_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if result["ok"]:
+        clear_camera_error()
+        set_camera_health("ok", result.get("code"), result.get("message", "OK"), checked_at)
+    else:
+        set_camera_health("error", result.get("code"), result.get("message", "Error"), checked_at)
+    try:
+        asyncio.run(broadcast({
+            "type": "camera_health",
+            "status": "ok" if result["ok"] else "error",
+            "code": result.get("code"),
+            "message": result.get("message"),
+            "checked_at": checked_at,
+        }))
+    except RuntimeError as err:
+        log("error", f"Failed to send camera health update: {err}")
+
+
 # === Start scheduler ===
 def start_scheduler():
     """Initialize and start the scheduler."""
@@ -169,6 +192,12 @@ def start_scheduler():
         job_status_heartbeat,
         trigger=IntervalTrigger(seconds=STATUS_HEARTBEAT_SECONDS),
         id="job_status_heartbeat",
+        replace_existing=True
+    )
+    scheduler.add_job(
+        job_camera_healthcheck,
+        trigger=IntervalTrigger(seconds=CAMERA_HEALTHCHECK_SECONDS),
+        id="job_camera_healthcheck",
         replace_existing=True
     )
 
