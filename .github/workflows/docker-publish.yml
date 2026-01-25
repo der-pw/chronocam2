@@ -41,7 +41,7 @@ jobs:
             raise SystemExit("APP_VERSION is empty")
           print(f"Found APP_VERSION={version}")
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as fh:
-            fh.write(f"version={version}\\n")
+            fh.write(f"version={version}\n")
           PY
         shell: bash
 
