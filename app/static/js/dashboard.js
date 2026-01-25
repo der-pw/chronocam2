@@ -33,7 +33,7 @@
     statusCameraError: root.dataset.statusCameraError || 'Camera access error',
     statusLastSuccess: root.dataset.statusLastSuccess || 'Last image captured successfully',
     statusReconnecting: root.dataset.statusReconnecting || 'Reconnecting to live updates …',
-    statusFailed: root.dataset.statusFailed || 'Status konnte nicht geladen werden',
+    statusFailed: root.dataset.statusFailed || 'Status could not be loaded',
     actionError: root.dataset.actionError || 'Action failed',
     actionSuccess: root.dataset.actionSuccess || 'Action completed',
   };
@@ -154,7 +154,7 @@
 
       updateCameraError(data.camera_error || null);
     } catch (err) {
-      console.warn('Status konnte nicht geladen werden', err);
+      console.warn('Status could not be loaded', err);
       setStatus(messages.statusFailed);
     }
   }

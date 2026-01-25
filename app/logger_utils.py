@@ -5,13 +5,13 @@ from datetime import datetime
 logger = logging.getLogger("chronocam")
 logger.setLevel(logging.WARNING)
 
-# Console handler (keine Datei!)
+# Console handler (no file output)
 console_handler = logging.StreamHandler()
 formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
-# In-memory buffer (für Live-Ansicht)
+# In-memory buffer (for live view)
 LOG_BUFFER = []
 
 

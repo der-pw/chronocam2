@@ -19,7 +19,7 @@ ChronoCam2 is a tool for automatically capturing images from a webcam at regular
 - `app/` — Application code (FastAPI + templates + static assets)
 - `app/static/js/` — Frontend scripts (shared helpers, dashboard, settings)
 - `app/templates/` — Jinja2 templates for pages
-- `app/config.json` — Runtime configuration
+- `app/data/config.json` — Runtime configuration (local default)
 
 ## Quickstart
 - Prerequisites: Python 3.10+
@@ -53,12 +53,12 @@ ChronoCam2 is a tool for automatically capturing images from a webcam at regular
 - Shared helpers for fetch + alerts live in `app/static/js/app.js`, while page-specific logic is in `dashboard.js` and `settings.js`.
 
 ## Configuration
-- File: `app/config.json`
+- File: `app/data/config.json` (local), `/data/config.json` (Docker)
 - Keys (subset):
   - `cam_url`: string; webcam snapshot URL
   - `username` / `password`: optional, for `basic`/`digest` auth
   - `auth_type`: `none` | `basic` | `digest`
-  - `save_path`: directory to store snapshots (default `./data`)
+  - `save_path`: directory to store snapshots (default `./pictures`, relative to the pictures root)
   - `interval_seconds`: polling interval for snapshots
   - `active_start` / `active_end`: HH:MM window for activity
   - `active_days`: list like `["Mon", "Tue", ...]`
@@ -66,6 +66,10 @@ ChronoCam2 is a tool for automatically capturing images from a webcam at regular
   - `city_lat` / `city_lon` / `city_tz`: location settings
   - `language`: `de` or `en` (templates/i18n)
   - `paused`: bool; persists pause/resume state across restarts
+
+Environment overrides:
+- `CHRONOCAM_DATA_DIR`: optional env var to override where `config.json` is stored
+- `CHRONOCAM_PICTURES_DIR`: optional env var to override the pictures root
 
 
 ## Docker Compose
@@ -83,19 +87,26 @@ services:
     restart: unless-stopped
 
     ports:
-      - "8001:8000"
+      - "8000:8000"
 
     volumes:
       - ./data:/data
+      - ./pictures:/pictures
     environment:
       TZ: "Europe/Berlin"
+      CHRONOCAM_DATA_DIR: "/data"
+      CHRONOCAM_PICTURES_DIR: "/pictures"
 
     user: "1000:1000"
 ```
 
 Notes:
-- `8001:8000` maps the container's web UI to host port 8001.
+- `8000:8000` maps the container's web UI to host port 8000.
 - `./data:/data` persists captured images/config outside the container.
+- `CHRONOCAM_DATA_DIR=/data` (optional) forces config storage in the mounted volume.
+- `./pictures:/pictures` should be a persistent path (like `./data:/data`) to avoid losing snapshots on container recreation.
+- `./pictures:/pictures` stores snapshots outside the container (can be a NAS/network mount).
+- The image runs as `appuser` by default, but the Compose example overrides this with `user: "1000:1000"` for host mounts.
 - Adjust `TZ` to your timezone and `user` to the correct UID:GID.
 
 ### Linux Quick Start (Docker Compose)
@@ -103,12 +114,20 @@ Notes:
 - Create project folder and enter it:
   - `mkdir -p chronocam2 && cd chronocam2`
 - Create `docker-compose.yml` in this folder with the content above.
-- Create data folder and set ownership (adjust UID:GID as needed):
-  - `mkdir -p data`
-  - `sudo chown 1000:1000 data`
+- Create data folders and set ownership (adjust UID:GID as needed):
+  ```
+  mkdir -p data pictures
+  sudo chown -R 1000:1000 data
+  sudo chown -R 1000:1000 pictures
+  ```
 - Pull images: `docker compose pull`
 - Start in background: `docker compose up -d`
-- Open the UI: `http://<your-dockerhost>:8001`
+- Open the UI: `http://<your-dockerhost>:8000`
+
+Preparation notes:
+- The container runs as `1000:1000` in the example. Ensure the host `data/` folder is writable by that UID:GID.
+- If you want to run as a different user, change `user:` and align ownership with `chown`.
+- `data/config.json` will be created on first start; `pictures/` is where snapshots are stored.
 
 
 ## License

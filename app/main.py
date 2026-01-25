@@ -8,7 +8,7 @@ import asyncio
 import json
 from datetime import datetime
 
-from app.config_manager import load_config, save_config
+from app.config_manager import load_config, save_config, resolve_save_dir
 from app.models import ConfigModel
 from app.scheduler import start_scheduler, stop_scheduler, cfg_lock, cfg, set_paused, is_active_time
 from app import i18n
@@ -25,7 +25,7 @@ from app.runtime_state import (
 # === FastAPI App ===
 app = FastAPI()
 
-# === Static Mount (CSS, JS, Bilder) ===
+# === Static Mount (CSS, JS, images) ===
 app.mount(
     "/static",
     StaticFiles(directory=Path(__file__).parent / "static"),
@@ -33,13 +33,15 @@ app.mount(
 )
 
 # === Templates ===
+APP_VERSION = "v2.2_beta"
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+templates.env.globals["app_version"] = APP_VERSION
 
 
-# === SSE: Server-Sent Events für Live-Updates ===
+# === SSE: server-sent events for live updates ===
 @app.get("/events")
 async def sse_events():
-    """SSE-Endpunkt für Dashboard-Updates (Snapshots, Status etc.)."""
+    """SSE endpoint for dashboard updates (snapshots, status, etc.)."""
     queue = asyncio.Queue()
     clients.add(queue)
 
@@ -55,13 +57,13 @@ async def sse_events():
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 
-# === Index-Seite ===
+# === Index page ===
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     async with cfg_lock:
         local_cfg = cfg
 
-    # Cache-Buster für last.jpg, damit sofort das aktuelle Bild geladen wird
+    # Cache buster for last.jpg to ensure immediate refresh
     cache_buster = int(datetime.now().timestamp())
 
     tr = i18n.load_translations(getattr(local_cfg, "language", "de"))
@@ -77,10 +79,10 @@ async def index(request: Request):
     )
 
 
-# === Settings-Seite ===
+# === Settings page ===
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request):
-    """Zeigt Einstellungsseite (dein Original-Layout)."""
+    """Render the settings page (original layout)."""
     async with cfg_lock:
         local_cfg = cfg
     message = None
@@ -101,7 +103,7 @@ async def settings_page(request: Request):
     )
 
 
-# === Einstellungen speichern ===
+# === Save settings ===
 @app.post("/update", response_class=HTMLResponse)
 async def update_settings(
     request: Request,
@@ -120,7 +122,7 @@ async def update_settings(
     CITY_TZ: str = Form("Europe/Berlin"),
     LANGUAGE: str = Form("de"),
 ):
-    """Speichert Settings und leitet mit Erfolgsparameter zurück zu /settings."""
+    """Persist settings and redirect back to /settings with a success flag."""
     async with cfg_lock:
         cfg.cam_url = CAM_URL
         cfg.interval_seconds = INTERVAL_SECONDS
@@ -142,21 +144,21 @@ async def update_settings(
     stop_scheduler()
     start_scheduler()
     await broadcast({"type": "status", "status": "config_reloaded"})
-    log("info", "Konfiguration gespeichert und Scheduler neu gestartet")
+    log("info", "Config saved and scheduler restarted")
 
-    # Redirect zurück zu /settings mit Erfolgsparameter
+    # Redirect back to /settings with success flag
     return RedirectResponse(url="/settings?saved=1", status_code=303)
 
 
-# === Status-Endpunkt ===
+# === Status endpoint ===
 @app.get("/status")
 async def status():
-    """Status-API fürs Dashboard."""
+    """Status API for the dashboard."""
     async with cfg_lock:
         local_cfg = cfg
 
-    app_dir = Path(__file__).resolve().parent
-    save_path = (app_dir / local_cfg.save_path).resolve()
+    # Resolve save path from config and env overrides
+    save_path = resolve_save_dir(getattr(local_cfg, "save_path", None))
 
     count = 0
     last_snapshot_ts = None
@@ -175,7 +177,7 @@ async def status():
             last_snapshot_ts = latest_dt.strftime("%H:%M:%S")
             last_snapshot_full = latest_dt.strftime("%d.%m.%y %H:%M")
     else:
-        log("warn", f"Speicherpfad existiert nicht: {save_path}")
+        log("warn", f"Save path does not exist: {save_path}")
 
     if getattr(local_cfg, "use_astral", False):
         sunrise_time, sunset_time = get_sun_times(local_cfg)
@@ -185,7 +187,7 @@ async def status():
         sunrise_str = "--:--"
         sunset_str = "--:--"
 
-    # Verwende dieselbe Logik wie der Scheduler, inkl. aktiver Wochentage
+    # Use the same logic as the scheduler, including active weekdays
     active = is_active_time(local_cfg)
 
     from app.scheduler import is_paused as scheduler_paused
@@ -202,7 +204,7 @@ async def status():
     }
 
 
-# === Action-Routen ===
+# === Action routes ===
 @app.post("/action/pause")
 async def action_pause():
     await set_paused(True)
@@ -232,23 +234,23 @@ async def action_snapshot():
         })
         return {"ok": True}
     else:
-        set_camera_error("snapshot_failed", "Snapshot fehlgeschlagen")
+        set_camera_error("snapshot_failed", "Snapshot failed")
         await broadcast({
             "type": "camera_error",
             "code": "snapshot_failed",
-            "message": "Snapshot fehlgeschlagen"
+            "message": "Snapshot failed"
         })
         return {"ok": False}
 
 
-# === App-Lifecycle ===
+# === App lifecycle ===
 @app.on_event("startup")
 def startup_event():
-    log("info", "Starte ChronoCam ...")
+    log("info", "Starting ChronoCam ...")
     start_scheduler()
 
 
 @app.on_event("shutdown")
 def shutdown_event():
-    log("info", "Beende ChronoCam ...")
+    log("info", "Stopping ChronoCam ...")
     stop_scheduler()

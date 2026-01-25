@@ -9,10 +9,10 @@ from app.downloader import take_snapshot
 from app.logger_utils import log
 from app.broadcast_manager import broadcast
 from app.sunrise_utils import is_within_time_range, get_sun_times
-from app.config_manager import load_config, save_config
+from app.config_manager import load_config, save_config, resolve_save_dir
 from app.runtime_state import set_camera_error, clear_camera_error
 
-# Globale Variablen
+# Global state
 scheduler = None
 cfg = load_config()
 cfg_lock = asyncio.Lock()
@@ -20,18 +20,18 @@ is_paused = getattr(cfg, "paused", False)
 STATUS_HEARTBEAT_SECONDS = 10
 
 
-# === Prüfen, ob aktuell Aufnahmezeit ist ===
+# === Check whether we are inside the capture window ===
 def is_active_time(cfg):
-    """True, wenn sich die aktuelle Zeit innerhalb des Aufnahmefensters befindet."""
+    """True if the current time is within the capture window."""
     try:
         start_time = datetime.strptime(cfg.active_start, "%H:%M").time()
         end_time = datetime.strptime(cfg.active_end, "%H:%M").time()
     except Exception:
-        return True  # Fallback: immer aktiv
+        return True  # Fallback: always active
 
     active = is_within_time_range(start_time, end_time)
 
-    # Optional: Wochentage berücksichtigen, falls gesetzt
+    # Optional: honor active weekdays if configured
     try:
         days = getattr(cfg, "active_days", []) or []
         if days:
@@ -42,7 +42,7 @@ def is_active_time(cfg):
     except Exception:
         pass
 
-    # Falls Astral aktiviert ist → Sonnenzeiten berücksichtigen
+    # If Astral is enabled, further restrict by sunrise/sunset
     if getattr(cfg, "use_astral", False):
         sunrise, sunset = get_sun_times(cfg)
         if sunrise and sunset:
@@ -51,18 +51,18 @@ def is_active_time(cfg):
     return active
 
 
-# === 🆕 Neu: Letztes vorhandenes Bild beim Start kopieren ===
+# === On startup: copy latest snapshot for dashboard preview ===
 def copy_latest_image_on_startup(cfg):
-    """Kopiert das neueste vorhandene Bild aus data/ nach static/img/last.jpg."""
+    """Copy the newest image to static/img/last.jpg on startup."""
     app_dir = Path(__file__).resolve().parent
-    data_dir = (app_dir / cfg.save_path).resolve()
+    data_dir = resolve_save_dir(getattr(cfg, "save_path", None))
     target_path = app_dir / "static" / "img" / "last.jpg"
 
     if not data_dir.exists():
-        print(f"[INIT] Kein Datenverzeichnis gefunden: {data_dir}")
+        print(f"[INIT] Data directory not found: {data_dir}")
         return
 
-    # Alle Bilddateien auflisten, nach Änderungszeit sortieren
+    # List all images and sort by modification time
     images = sorted(
         [f for f in data_dir.iterdir() if f.is_file() and f.suffix.lower() in (".jpg", ".jpeg", ".png")],
         key=lambda f: f.stat().st_mtime,
@@ -73,31 +73,31 @@ def copy_latest_image_on_startup(cfg):
         try:
             target_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(images[0], target_path)
-            print(f"[INIT] last.jpg aktualisiert → {images[0].name}")
+            print(f"[INIT] last.jpg updated -> {images[0].name}")
         except Exception as e:
-            print(f"[INIT] Konnte last.jpg nicht kopieren: {e}")
+            print(f"[INIT] Failed to copy last.jpg: {e}")
     else:
-        print("[INIT] Kein vorhandenes Bild zum Kopieren gefunden.")
+        print("[INIT] No existing image found to copy.")
 
 
-# === Scheduler-Job ===
+# === Scheduler job ===
 def job_snapshot():
-    """Führt Snapshot-Aufnahme aus, falls erlaubt."""
+    """Run a snapshot capture if allowed."""
     global cfg, is_paused
 
     if is_paused:
-        log("info", "Scheduler pausiert – kein Snapshot.")
+        log("info", "Scheduler paused - no snapshot.")
         return
 
     local_cfg = cfg
 
     if not is_active_time(local_cfg):
-        log("info", "Nicht im aktiven Zeitraum – übersprungen.")
+        log("info", "Outside active window - skipped.")
         return
 
     result = take_snapshot(local_cfg)
     if result:
-        # Nach jedem neuen Snapshot → last.jpg aktualisieren
+        # After each snapshot, update last.jpg
         try:
             app_dir = Path(__file__).resolve().parent
             src = Path(result["filepath"])
@@ -105,7 +105,7 @@ def job_snapshot():
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(src, dest)
         except Exception as e:
-            log("error", f"Fehler beim Kopieren von last.jpg: {e}")
+            log("error", f"Failed to copy last.jpg: {e}")
 
         asyncio.run(broadcast({
             "type": "snapshot",
@@ -113,23 +113,23 @@ def job_snapshot():
             "timestamp": result["timestamp"],
             "timestamp_full": result.get("timestamp_full")
         }))
-        log("info", f"Snapshot gespeichert: {result['filename']}")
+        log("info", f"Snapshot saved: {result['filename']}")
         clear_camera_error()
     else:
-        log("error", "Snapshot fehlgeschlagen")
-        set_camera_error("snapshot_failed", "Snapshot fehlgeschlagen")
+        log("error", "Snapshot failed")
+        set_camera_error("snapshot_failed", "Snapshot failed")
         try:
             asyncio.run(broadcast({
                 "type": "camera_error",
                 "code": "snapshot_failed",
-                "message": "Snapshot fehlgeschlagen"
+                "message": "Snapshot failed"
             }))
         except RuntimeError as err:
-            log("error", f"Kamera-Fehler konnte nicht gesendet werden: {err}")
+            log("error", f"Failed to send camera error: {err}")
 
 
 def job_status_heartbeat():
-    """Sendet regelmäßige Status-Events via SSE."""
+    """Send periodic status events via SSE."""
     global cfg, is_paused
 
     if is_paused:
@@ -143,18 +143,18 @@ def job_status_heartbeat():
             "status": status
         }))
     except RuntimeError as err:
-        log("error", f"Status-Heartbeat konnte nicht gesendet werden: {err}")
+        log("error", f"Failed to send status heartbeat: {err}")
 
 
-# === Scheduler starten ===
+# === Start scheduler ===
 def start_scheduler():
-    """Initialisiert und startet den Scheduler."""
+    """Initialize and start the scheduler."""
     global scheduler, cfg
 
     if scheduler:
         scheduler.shutdown(wait=False)
 
-    # 🆕 Letztes vorhandenes Bild direkt beim Start kopieren
+    # Copy last snapshot immediately on startup
     copy_latest_image_on_startup(cfg)
 
     scheduler = BackgroundScheduler(timezone="Europe/Berlin")
@@ -173,22 +173,22 @@ def start_scheduler():
     )
 
     scheduler.start()
-    log("info", f"Scheduler gestartet (Intervall: {cfg.interval_seconds}s)")
+    log("info", f"Scheduler started (interval: {cfg.interval_seconds}s)")
 
 
-# === Scheduler stoppen ===
+# === Stop scheduler ===
 def stop_scheduler():
-    """Beendet den Scheduler."""
+    """Stop the scheduler."""
     global scheduler
     if scheduler:
         scheduler.shutdown(wait=False)
-        log("info", "Scheduler gestoppt")
+        log("info", "Scheduler stopped")
         scheduler = None
 
 
-# === Pause/Resume steuern ===
+# === Pause/resume control ===
 async def set_paused(value: bool, *, persist: bool = True) -> None:
-    """Setzt den pausiert-Status des Schedulers und speichert optional die Config."""
+    """Set the scheduler paused state and optionally persist config."""
     global cfg, is_paused
 
     async with cfg_lock:
@@ -198,8 +198,8 @@ async def set_paused(value: bool, *, persist: bool = True) -> None:
         if persist:
             try:
                 save_config(cfg)
-            except Exception as exc:  # pragma: no cover - Logging reicht hier
-                log("warn", f"Pause-Status konnte nicht gespeichert werden: {exc}")
+            except Exception as exc:  # pragma: no cover - logging is sufficient here
+                log("warn", f"Failed to persist pause state: {exc}")
 
-    state = "pausiert" if is_paused else "fortgesetzt"
+    state = "paused" if is_paused else "resumed"
     log("info", f"Scheduler {state}")

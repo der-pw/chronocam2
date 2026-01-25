@@ -4,32 +4,32 @@ from datetime import time
 
 
 class ConfigModel(BaseModel):
-    """Globale App-Konfiguration (ersetzt frühere INI-Datei)"""
-    cam_url: str = Field("", description="URL des Webcam-Snapshots")
-    username: Optional[str] = Field(None, description="Kamera-Benutzername")
-    password: Optional[str] = Field(None, description="Kamera-Passwort")
-    auth_type: str = Field("none", description="Authentifizierungstyp: none/basic/digest")
-    save_path: str = Field("./data", description="Pfad zum Speichern der Bilder")
+    """Global app configuration (replaces the former INI file)."""
+    cam_url: str = Field("", description="Webcam snapshot URL")
+    username: Optional[str] = Field(None, description="Camera username")
+    password: Optional[str] = Field(None, description="Camera password")
+    auth_type: str = Field("none", description="Auth type: none/basic/digest")
+    save_path: str = Field("./pictures", description="Directory to store snapshots")
 
-    interval_seconds: int = Field(10, description="Aufnahmeintervall in Sekunden")
-    active_start: str = Field("06:00", description="Startzeit (HH:MM)")
-    active_end: str = Field("18:00", description="Endzeit (HH:MM)")
+    interval_seconds: int = Field(10, description="Capture interval in seconds")
+    active_start: str = Field("06:00", description="Start time (HH:MM)")
+    active_end: str = Field("18:00", description="End time (HH:MM)")
     active_days: List[str] = Field(default_factory=lambda: ["Mon", "Tue", "Wed", "Thu", "Fri"])
 
-    paused: bool = Field(False, description="Scheduler-Status: pausiert ja/nein")
+    paused: bool = Field(False, description="Scheduler state: paused yes/no")
 
-    use_astral: bool = Field(False, description="Sonnenauf-/untergang verwenden")
-    city_lat: float = Field(52.52, description="Breitengrad")
-    city_lon: float = Field(13.405, description="Längengrad")
-    city_tz: str = Field("Europe/Berlin", description="Zeitzone")
+    use_astral: bool = Field(False, description="Use sunrise/sunset")
+    city_lat: float = Field(52.52, description="Latitude")
+    city_lon: float = Field(13.405, description="Longitude")
+    city_tz: str = Field("Europe/Berlin", description="Timezone")
 
-    log_file: Optional[str] = Field(None, description="Logdatei (optional)")
+    log_file: Optional[str] = Field(None, description="Log file (optional)")
     log_enabled: bool = Field(True, description="Write chronocam.log file")
     language: str = Field("de", description="Language code (e.g., de, en)")
 
 
 class StatusModel(BaseModel):
-    """Status-API-Rückgabe"""
+    """Status API response."""
     time: str
     active: bool
     paused: bool = False
@@ -37,7 +37,7 @@ class StatusModel(BaseModel):
 
 
 class SnapshotEvent(BaseModel):
-    """SSE-Ereignis (z. B. neues Bild oder Fehler)"""
+    """SSE event (e.g., new image or error)."""
     type: str
     message: Optional[str] = None
     filename: Optional[str] = None

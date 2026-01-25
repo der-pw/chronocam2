@@ -3,7 +3,7 @@
   "username": "",
   "password": "",
   "auth_type": "none",
-  "save_path": "/data/pictures",
+  "save_path": "./pictures",
   "interval_seconds": 300,
   "active_start": "06:00",
   "active_end": "22:00",

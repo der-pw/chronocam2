@@ -17,7 +17,7 @@ endblock %}
 <form id="settings-form" method="post" action="/update" class="mt-3"
       data-save-success="{{ tr.get('settings_saved', 'Einstellungen gespeichert') if tr else 'Einstellungen gespeichert' }}"
       data-save-error="{{ tr.get('settings_save_failed', 'Speichern fehlgeschlagen') if tr else 'Speichern fehlgeschlagen' }}">
-  <!-- Sprache -->
+  <!-- Language -->
   <h5 class="mb-2"><i class="fa-solid fa-language me-2"></i>{{ tr['language'] if tr else 'Sprache' }}</h5>
   <div class="row g-3 mb-3">
     <div class="col-md-3">
@@ -31,7 +31,7 @@ endblock %}
     </div>
   </div>
   <hr class="mx-auto">
-  <!-- Kameraeinstellungen -->
+  <!-- Camera settings -->
   <h5 class="mb-2"><i class="fa-solid fa-camera me-2"></i>{{ tr["camera"] if tr else "Camera" }}</h5>
   <div class="row g-3 mb-3">
     <div class="col-md-10">
@@ -48,7 +48,7 @@ endblock %}
     </div>
   </div>
   <hr class="mx-auto">
-  <!-- Authentifizierung -->
+  <!-- Authentication -->
   <h5 class="mb-2"><i class="fa-solid fa-lock me-2"></i>{{ tr["auth"] if tr else "Authentication" }}</h5>
   <div class="row g-3 mb-3">
     <div class="col-md-2">
@@ -72,10 +72,10 @@ endblock %}
     </div>
   </div>
   <hr class="mx-auto">
-  <!-- Zeitsteuerung -->
+  <!-- Time control -->
   <h5 class="mb-2"><i class="fa-solid fa-clock me-2"></i>{{ tr["time_control"] if tr else "Time Control" }}</h5>
   <div class="row g-3 mb-3">
-    <!-- Linke Spalte: Start-/Endzeit (untereinander) -->
+    <!-- Left column: start/end time (stacked) -->
     <div class="col-md-2">
       <div class="mb-3">
         <label class="form-label">{{ tr["start_time"] if tr else "Start Time" }}</label>

@@ -40,6 +40,10 @@ ENV/
 
 # Projektspezifisch
 data/
+app/data/
+pictures/
+app/pictures/
+app/config.json
 app/config.local.json
 *.bak
 app/downloads/*

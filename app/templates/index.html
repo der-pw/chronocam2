@@ -19,13 +19,13 @@
   <h2><i class="fa-solid fa-camera me-2"></i>{{ tr["dashboard_title"] if tr else "Dashboard" }}</h2>
   <hr class="mx-auto">
 
-    <!-- Statusanzeige -->
+    <!-- Status area -->
     <div id="status-container" class="my-3">
       <p id="status-text" class="lead m-0">{{ tr["status_starting"] if tr else "Starting monitoring ..." }}</p>
       <p id="cam-error" class="text-danger mt-2" style="display:none;"></p>
     </div>
 
-    <!-- Bildanzeige -->
+    <!-- Image preview -->
     <div class="text-center mt-3 mb-3">
       <div class="image-frame bg-body-tertiary">
         <img id="latest-img" src="{{ url_for('static', path='img/last.jpg') }}?t={{ cache_buster }}" alt="{{ tr['last_image_alt'] if tr else 'Last image' }}"
@@ -34,19 +34,19 @@
       <p id="last-time" class="mt-2">{{ tr["last_image_label"] if tr else "Last image" }}: --:--:--</p>
     </div>
 
-  <!-- Steuerung -->
+  <!-- Controls -->
   <div class="d-flex justify-content-center mb-3 gap-3">
     <button id="btn-pause" class="btn btn-warning">{{ tr["pause"] if tr else "Pause" }}</button>
     <button id="btn-resume" class="btn btn-success">{{ tr["resume"] if tr else "Resume" }}</button>
     <button id="btn-snapshot" class="btn btn-primary">{{ tr["snapshot"] if tr else "Snapshot" }}</button>
   </div>
 
-  <!-- Infos: 3 Spalten ({{ tr["time"] if tr else "Time" }}/Bilder | Start/Ende | {{ tr["sunrise"] if tr else "Sunrise" }}/-untergang) -->
+  <!-- Info: 3 columns (Time/Images | Start/End | Sunrise/Sunset) -->
   <div class="row justify-content-center mb-3">
     <div class="col-md-10">
       <div class="card shadow-sm p-3 bg-body-tertiary">
         <div class="row text-center align-items-center">
-          <!-- Spalte 1: {{ tr["time"] if tr else "Time" }} & {{ tr["saved_images"] if tr else "Saved Images" }} -->
+          <!-- Column 1: {{ tr["time"] if tr else "Time" }} & {{ tr["saved_images"] if tr else "Saved Images" }} -->
           <div class="col-12 col-md-4 mb-3 mb-md-0">
             <div class="fw-bold"><i class="fa-solid fa-clock me-1"></i>{{ tr["time"] if tr else "Time" }}</div>
             <div id="time">--:--</div>
@@ -54,7 +54,7 @@
             <div id="count">0</div>
           </div>
 
-          <!-- Spalte 2: Start-/{{ tr["end_time"] if tr else "End Time" }} -->
+          <!-- Column 2: Start/{{ tr["end_time"] if tr else "End Time" }} -->
           <div class="col-12 col-md-4 mb-3 mb-md-0">
             <div class="fw-bold"><i class="fa-solid fa-play me-1"></i>{{ tr["start_time"] if tr else "Start Time" }}</div>
             <div id="start-time">{{ cfg.active_start }}</div>
@@ -62,7 +62,7 @@
             <div id="end-time">{{ cfg.active_end }}</div>
           </div>
 
-          <!-- Spalte 3: {{ tr["sunrise"] if tr else "Sunrise" }} & {{ tr["sunset"] if tr else "Sunset" }} -->
+          <!-- Column 3: {{ tr["sunrise"] if tr else "Sunrise" }} & {{ tr["sunset"] if tr else "Sunset" }} -->
           <div class="col-12 col-md-4">
             <div class="fw-bold"><i class="fa-solid fa-sun me-1"></i>{{ tr["sunrise"] if tr else "Sunrise" }}</div>
             <div id="sunrise">--:--</div>

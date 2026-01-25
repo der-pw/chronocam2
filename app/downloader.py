@@ -4,56 +4,57 @@ from datetime import datetime
 from pathlib import Path
 import shutil
 from app.logger_utils import log
+from app.config_manager import resolve_save_dir
 
 
 def take_snapshot(cfg):
-    """Lädt ein Bild von der Kamera herunter und speichert es lokal."""
+    """Download a snapshot from the camera and store it locally."""
     if not cfg.cam_url:
-        log("warn", "Keine Kamera-URL gesetzt – Snapshot übersprungen.")
+        log("warn", "No camera URL configured - snapshot skipped.")
         return None
 
     try:
-        app_dir = Path(__file__).resolve().parent
-        save_dir = (app_dir / cfg.save_path).resolve()
+        # Resolve save_dir using configured base + relative path
+        save_dir = resolve_save_dir(getattr(cfg, "save_path", None))
         save_dir.mkdir(parents=True, exist_ok=True)
 
         now = datetime.now()
         filename = f"snapshot_{now.strftime('%Y%m%d_%H%M%S')}.jpg"
         filepath = save_dir / filename
 
-        # Authentifizierung
+        # Select auth method based on config
         auth = None
         if cfg.auth_type == "basic" and cfg.username and cfg.password:
             auth = HTTPBasicAuth(cfg.username, cfg.password)
-            log("info", "Verwende HTTP Basic Auth.")
+            log("info", "Using HTTP Basic Auth.")
         elif cfg.auth_type == "digest" and cfg.username and cfg.password:
             auth = HTTPDigestAuth(cfg.username, cfg.password)
-            log("info", "Verwende HTTP Digest Auth.")
+            log("info", "Using HTTP Digest Auth.")
         else:
-            log("info", "Keine Authentifizierung verwendet.")
+            log("info", "No authentication used.")
 
-        # Snapshot laden
-        log("info", f"Lade Snapshot von {cfg.cam_url} ...")
+        # Fetch snapshot
+        log("info", f"Fetching snapshot from {cfg.cam_url} ...")
         resp = requests.get(cfg.cam_url, auth=auth, timeout=10)
 
         if resp.status_code != 200:
-            log("error", f"Kamera antwortete mit Status {resp.status_code}")
+            log("error", f"Camera responded with status {resp.status_code}")
             return None
 
-        # Datei speichern
+        # Write file to disk
         with open(filepath, "wb") as f:
             f.write(resp.content)
 
-        log("info", f"Snapshot gespeichert: {filename}")
+        log("info", f"Snapshot saved: {filename}")
 
-        # Kopie nach app/static/img/last.jpg für Dashboard
+        # Copy to app/static/img/last.jpg for the dashboard preview
         try:
             preview_path = Path(__file__).resolve().parent / "static" / "img" / "last.jpg"
             preview_path.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy(filepath, preview_path)
-            log("info", f"last.jpg aktualisiert ({preview_path})")
+            log("info", f"last.jpg updated ({preview_path})")
         except Exception as e:
-            log("error", f"Fehler beim Kopieren von last.jpg: {e}")
+            log("error", f"Failed to copy last.jpg: {e}")
 
         return {
             "filename": filename,
@@ -63,5 +64,5 @@ def take_snapshot(cfg):
         }
 
     except Exception as e:
-        log("error", f"Snapshot fehlgeschlagen: {e}")
+        log("error", f"Snapshot failed: {e}")
         return None
