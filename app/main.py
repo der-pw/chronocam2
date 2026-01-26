@@ -7,6 +7,8 @@ from pathlib import Path
 import asyncio
 import json
 from datetime import datetime
+import os
+import secrets
 
 from app.config_manager import load_config, save_config, resolve_save_dir
 from app.models import ConfigModel
@@ -25,6 +27,7 @@ from app.runtime_state import (
     set_image_stats,
     get_image_stats,
 )
+from starlette.middleware.sessions import SessionMiddleware
 
 # === FastAPI App ===
 app = FastAPI()
@@ -42,16 +45,59 @@ templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["app_version"] = APP_VERSION
 
 
+async def _get_access_password() -> str | None:
+    async with cfg_lock:
+        local_cfg = cfg
+    pwd = getattr(local_cfg, "access_password", None)
+    if pwd:
+        return pwd
+    return None
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    # Allow static assets without auth to avoid broken CSS/JS before login.
+    if request.url.path.startswith("/static"):
+        return await call_next(request)
+    if request.url.path in ("/login", "/logout"):
+        return await call_next(request)
+
+    password = await _get_access_password()
+    if not password:
+        return await call_next(request)
+
+    if request.session.get("authenticated"):
+        return await call_next(request)
+
+    return RedirectResponse(url="/login", status_code=303)
+
+
+_session_secret = os.getenv("CHRONOCAM_SESSION_SECRET") or secrets.token_urlsafe(32)
+if not os.getenv("CHRONOCAM_SESSION_SECRET"):
+    log("warn", "CHRONOCAM_SESSION_SECRET not set; using ephemeral secret.")
+app.add_middleware(SessionMiddleware, secret_key=_session_secret)
+
+
 def _compute_image_stats(save_path: Path) -> tuple[int, str | None, str | None]:
     """Compute image count and last snapshot timestamps from disk."""
-    stats = get_image_stats()
-    if stats:
-        count = stats.get("count", 0)
-        last_snapshot_ts = stats.get("last_snapshot")
-        last_snapshot_full = stats.get("last_snapshot_full")
+    count = 0
+    last_snapshot_ts = None
+    last_snapshot_full = None
+    latest_mtime = None
+    allowed_suffixes = ('.jpg', '.jpeg', '.png')
+    if save_path.exists():
+        for f in save_path.iterdir():
+            if f.is_file() and f.suffix.lower() in allowed_suffixes:
+                count += 1
+                mtime = f.stat().st_mtime
+                if latest_mtime is None or mtime > latest_mtime:
+                    latest_mtime = mtime
+        if latest_mtime:
+            latest_dt = datetime.fromtimestamp(latest_mtime)
+            last_snapshot_ts = latest_dt.strftime("%H:%M:%S")
+            last_snapshot_full = latest_dt.strftime("%d.%m.%y %H:%M")
     else:
-        count, last_snapshot_ts, last_snapshot_full = _compute_image_stats(save_path)
-        set_image_stats(count, last_snapshot_ts, last_snapshot_full)
+        log("warn", f"Save path does not exist: {save_path}")
     return count, last_snapshot_ts, last_snapshot_full
 
 # === SSE: server-sent events for live updates ===
@@ -71,6 +117,44 @@ async def sse_events():
             raise
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+# === Auth: login/logout ===
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    password = await _get_access_password()
+    if not password:
+        return RedirectResponse(url="/", status_code=303)
+    async with cfg_lock:
+        local_cfg = cfg
+    tr = i18n.load_translations(getattr(local_cfg, "language", "de"))
+    return templates.TemplateResponse(
+        "login.html",
+        {"request": request, "error": False, "cfg": local_cfg, "tr": tr, "lang": getattr(local_cfg, "language", "de")}
+    )
+
+
+@app.post("/login", response_class=HTMLResponse)
+async def login_submit(request: Request, ACCESS_PASSWORD: str = Form("")):
+    password = await _get_access_password()
+    if not password:
+        return RedirectResponse(url="/", status_code=303)
+    if ACCESS_PASSWORD == password:
+        request.session["authenticated"] = True
+        return RedirectResponse(url="/", status_code=303)
+    async with cfg_lock:
+        local_cfg = cfg
+    tr = i18n.load_translations(getattr(local_cfg, "language", "de"))
+    return templates.TemplateResponse(
+        "login.html",
+        {"request": request, "error": True, "cfg": local_cfg, "tr": tr, "lang": getattr(local_cfg, "language", "de")}
+    )
+
+
+@app.get("/logout")
+async def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(url="/login", status_code=303)
 
 
 # === Index page ===
@@ -125,6 +209,7 @@ async def update_settings(
     request: Request,
     CAM_URL: str = Form(...),
     INSTANCE_NAME: str = Form(""),
+    ACCESS_PASSWORD: str = Form(""),
     INTERVAL_SECONDS: int = Form(...),
     SAVE_PATH: str = Form(...),
     AUTH_TYPE: str = Form("none"),
@@ -143,6 +228,7 @@ async def update_settings(
     async with cfg_lock:
         cfg.cam_url = CAM_URL
         cfg.instance_name = INSTANCE_NAME.strip() or None
+        cfg.access_password = ACCESS_PASSWORD
         cfg.interval_seconds = INTERVAL_SECONDS
         cfg.save_path = SAVE_PATH
         cfg.auth_type = AUTH_TYPE

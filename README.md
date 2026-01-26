@@ -66,6 +66,7 @@ ChronoCam2 is a tool for automatically capturing images from a webcam at regular
   - `city_lat` / `city_lon` / `city_tz`: location settings
   - `language`: `de` or `en` (templates/i18n)
   - `paused`: bool; persists pause/resume state across restarts
+  - `access_password`: optional; if set, the UI requires a login (leave empty to disable)
 
 Environment overrides:
 - `CHRONOCAM_DATA_DIR`: optional env var to override where `config.json` is stored

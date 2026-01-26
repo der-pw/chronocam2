@@ -33,6 +33,11 @@ endblock %}
         {% endfor %}
       </select>
     </div>
+    <div class="col-md-7">
+      <label class="form-label">{{ tr.get("access_password", "Access Password") if tr else "Access Password" }}</label>
+      <input type="password" class="form-control" name="ACCESS_PASSWORD" value="{{ cfg.access_password or '' }}">
+      <div class="form-text">{{ tr.get("access_password_help", "Leave empty to disable login") if tr else "Leave empty to disable login" }}</div>
+    </div>
   </div>
   <hr class="mx-auto">
   <!-- Camera settings -->

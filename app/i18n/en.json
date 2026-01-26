@@ -1,6 +1,8 @@
 {
   "app_name": "ChronoCam2",
   "instance_name": "Instance Name",
+  "access_password": "Access Password",
+  "access_password_help": "Leave empty to disable login",
   "main": "Main",
   "nav_dashboard": "Dashboard",
   "nav_settings": "Settings",
