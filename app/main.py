@@ -22,6 +22,8 @@ from app.runtime_state import (
     get_camera_error,
     set_camera_health,
     get_camera_health,
+    set_image_stats,
+    get_image_stats,
 )
 
 # === FastAPI App ===
@@ -39,6 +41,18 @@ APP_VERSION = "2.2.3"
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["app_version"] = APP_VERSION
 
+
+def _compute_image_stats(save_path: Path) -> tuple[int, str | None, str | None]:
+    """Compute image count and last snapshot timestamps from disk."""
+    stats = get_image_stats()
+    if stats:
+        count = stats.get("count", 0)
+        last_snapshot_ts = stats.get("last_snapshot")
+        last_snapshot_full = stats.get("last_snapshot_full")
+    else:
+        count, last_snapshot_ts, last_snapshot_full = _compute_image_stats(save_path)
+        set_image_stats(count, last_snapshot_ts, last_snapshot_full)
+    return count, last_snapshot_ts, last_snapshot_full
 
 # === SSE: server-sent events for live updates ===
 @app.get("/events")
@@ -246,6 +260,9 @@ async def action_snapshot():
     result = take_snapshot(local_cfg)
     if result:
         clear_camera_error()
+        stats = get_image_stats() or {}
+        count = int(stats.get("count") or 0) + 1
+        set_image_stats(count, result["timestamp"], result.get("timestamp_full"))
         await broadcast({
             "type": "snapshot",
             "filename": result["filename"],

@@ -42,6 +42,9 @@
   let statusRevertTimer = null;
   let es = null;
   let esRetryDelay = 2000;
+  let sseConnected = false;
+  let pollTimer = null;
+  const POLL_INTERVAL_MS = 60000;
   let cameraErrorActive = false;
   let cameraErrorSource = null; // 'snapshot' | 'health'
 
@@ -214,9 +217,15 @@
 
     es.onopen = () => {
       esRetryDelay = 2000;
+      sseConnected = true;
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
     };
 
     es.onerror = () => {
+      sseConnected = false;
       setStatus(messages.statusReconnecting);
       if (es) {
         es.close();
@@ -224,6 +233,9 @@
       }
       setTimeout(connectSse, esRetryDelay);
       esRetryDelay = Math.min(esRetryDelay * 1.5, 30000);
+      if (!pollTimer) {
+        pollTimer = setInterval(() => fetchStatus({ syncImage: true }), POLL_INTERVAL_MS);
+      }
     };
 
     es.onmessage = (event) => {
@@ -302,5 +314,7 @@
   fetchStatus();
   connectSse();
   bindActions();
-  setInterval(() => fetchStatus({ syncImage: true }), 30000);
+  if (!sseConnected && !pollTimer) {
+    pollTimer = setInterval(() => fetchStatus({ syncImage: true }), POLL_INTERVAL_MS);
+  }
 })();

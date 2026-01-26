@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any
 
 _camera_error: Optional[Dict[str, Any]] = None
 _camera_health: Optional[Dict[str, Any]] = None
+_image_stats: Optional[Dict[str, Any]] = None
 
 
 def set_camera_error(code: Optional[str], message: str) -> None:
@@ -40,3 +41,18 @@ def set_camera_health(status: str, code: Optional[str], message: str, checked_at
 def get_camera_health() -> Optional[Dict[str, Any]]:
     """Return the last camera healthcheck info."""
     return _camera_health
+
+
+def set_image_stats(count: int, last_snapshot: Optional[str], last_snapshot_full: Optional[str]) -> None:
+    """Store cached image stats for the status endpoint."""
+    global _image_stats
+    _image_stats = {
+        "count": count,
+        "last_snapshot": last_snapshot,
+        "last_snapshot_full": last_snapshot_full,
+    }
+
+
+def get_image_stats() -> Optional[Dict[str, Any]]:
+    """Return cached image stats if present."""
+    return _image_stats

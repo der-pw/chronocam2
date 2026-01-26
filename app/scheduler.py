@@ -10,7 +10,13 @@ from app.logger_utils import log
 from app.broadcast_manager import broadcast
 from app.sunrise_utils import is_within_time_range, get_sun_times
 from app.config_manager import load_config, save_config, resolve_save_dir
-from app.runtime_state import set_camera_error, clear_camera_error, set_camera_health
+from app.runtime_state import (
+    set_camera_error,
+    clear_camera_error,
+    set_camera_health,
+    set_image_stats,
+    get_image_stats,
+)
 
 # Global state
 scheduler = None
@@ -81,6 +87,31 @@ def copy_latest_image_on_startup(cfg):
         print("[INIT] No existing image found to copy.")
 
 
+def _refresh_image_stats(cfg) -> None:
+    """Initialize cached image stats from disk."""
+    data_dir = resolve_save_dir(getattr(cfg, "save_path", None))
+    if not data_dir.exists():
+        set_image_stats(0, None, None)
+        return
+    allowed_suffixes = (".jpg", ".jpeg", ".png")
+    count = 0
+    latest_mtime = None
+    for f in data_dir.iterdir():
+        if f.is_file() and f.suffix.lower() in allowed_suffixes:
+            count += 1
+            mtime = f.stat().st_mtime
+            if latest_mtime is None or mtime > latest_mtime:
+                latest_mtime = mtime
+    if latest_mtime:
+        latest_dt = datetime.fromtimestamp(latest_mtime)
+        last_snapshot = latest_dt.strftime("%H:%M:%S")
+        last_snapshot_full = latest_dt.strftime("%d.%m.%y %H:%M")
+    else:
+        last_snapshot = None
+        last_snapshot_full = None
+    set_image_stats(count, last_snapshot, last_snapshot_full)
+
+
 # === Scheduler job ===
 def job_snapshot():
     """Run a snapshot capture if allowed."""
@@ -116,6 +147,9 @@ def job_snapshot():
         }))
         log("info", f"Snapshot saved: {result['filename']}")
         clear_camera_error()
+        stats = get_image_stats() or {}
+        count = int(stats.get("count") or 0) + 1
+        set_image_stats(count, result["timestamp"], result.get("timestamp_full"))
     else:
         log("error", "Snapshot failed")
         set_camera_error("snapshot_failed", "Snapshot failed")
@@ -179,6 +213,7 @@ def start_scheduler():
 
     # Copy last snapshot immediately on startup
     copy_latest_image_on_startup(cfg)
+    _refresh_image_stats(cfg)
 
     scheduler = BackgroundScheduler(timezone="Europe/Berlin")
 
