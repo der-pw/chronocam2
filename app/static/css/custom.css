@@ -27,6 +27,12 @@
 }
 
 @media (max-width: 767.98px) {
+  .image-frame {
+    background-color: transparent;
+    border: none;
+    padding: 0;
+  }
+
   .info-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
