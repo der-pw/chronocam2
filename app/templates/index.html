@@ -43,29 +43,41 @@
   <div class="row justify-content-center mb-3">
     <div class="col-md-12">
       <div class="card shadow-sm p-3 bg-body-tertiary">
-        <div class="row text-center align-items-center">
+        <div class="row text-center align-items-center info-grid">
           <!-- Column 1: {{ tr["time"] if tr else "Time" }} & {{ tr["saved_images"] if tr else "Saved Images" }} -->
-          <div class="col-12 col-md-4 mb-3 mb-md-0">
-            <div class="fw-bold"><i class="fa-solid fa-clock me-1"></i>{{ tr["time"] if tr else "Time" }}</div>
-            <div id="time">--:--</div>
-            <div class="fw-bold mt-3"><i class="fa-solid fa-images me-1"></i>{{ tr["saved_images"] if tr else "Saved Images" }}</div>
-            <div id="count">0</div>
+          <div class="col-12 col-md-4 mb-3 mb-md-0 info-col">
+            <div class="info-item">
+              <div class="fw-bold"><i class="fa-solid fa-clock me-1"></i>{{ tr["time"] if tr else "Time" }}</div>
+              <div id="time">--:--</div>
+            </div>
+            <div class="info-item">
+              <div class="fw-bold mt-3"><i class="fa-solid fa-images me-1"></i>{{ tr["saved_images"] if tr else "Saved Images" }}</div>
+              <div id="count">0</div>
+            </div>
           </div>
 
           <!-- Column 2: Start/{{ tr["end_time"] if tr else "End Time" }} -->
-          <div class="col-12 col-md-4 mb-3 mb-md-0">
-            <div class="fw-bold"><i class="fa-solid fa-play me-1"></i>{{ tr["start_time"] if tr else "Start Time" }}</div>
-            <div id="start-time">{{ cfg.active_start }}</div>
-            <div class="fw-bold mt-3"><i class="fa-solid fa-stop me-1"></i>{{ tr["end_time"] if tr else "End Time" }}</div>
-            <div id="end-time">{{ cfg.active_end }}</div>
+          <div class="col-12 col-md-4 mb-3 mb-md-0 info-col">
+            <div class="info-item">
+              <div class="fw-bold"><i class="fa-solid fa-play me-1"></i>{{ tr["start_time"] if tr else "Start Time" }}</div>
+              <div id="start-time">{{ cfg.active_start }}</div>
+            </div>
+            <div class="info-item">
+              <div class="fw-bold mt-3"><i class="fa-solid fa-stop me-1"></i>{{ tr["end_time"] if tr else "End Time" }}</div>
+              <div id="end-time">{{ cfg.active_end }}</div>
+            </div>
           </div>
 
           <!-- Column 3: {{ tr["sunrise"] if tr else "Sunrise" }} & {{ tr["sunset"] if tr else "Sunset" }} -->
-          <div class="col-12 col-md-4">
-            <div class="fw-bold"><i class="fa-solid fa-sun me-1"></i>{{ tr["sunrise"] if tr else "Sunrise" }}</div>
-            <div id="sunrise">--:--</div>
-            <div class="fw-bold mt-3"><i class="fa-solid fa-moon me-1"></i>{{ tr["sunset"] if tr else "Sunset" }}</div>
-            <div id="sunset">--:--</div>
+          <div class="col-12 col-md-4 info-col">
+            <div class="info-item">
+              <div class="fw-bold"><i class="fa-solid fa-sun me-1"></i>{{ tr["sunrise"] if tr else "Sunrise" }}</div>
+              <div id="sunrise">--:--</div>
+            </div>
+            <div class="info-item">
+              <div class="fw-bold mt-3"><i class="fa-solid fa-moon me-1"></i>{{ tr["sunset"] if tr else "Sunset" }}</div>
+              <div id="sunset">--:--</div>
+            </div>
           </div>
         </div>
       </div>

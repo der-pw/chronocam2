@@ -302,12 +302,31 @@
 
   function startClock() {
     if (!els.time) return;
+    let clockTimer = null;
     const updateClock = () => {
       const now = new Date();
       els.time.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
-    updateClock();
-    setInterval(updateClock, 1000);
+    const startTimer = () => {
+      if (clockTimer) return;
+      updateClock();
+      clockTimer = setInterval(updateClock, 1000);
+    };
+    const stopTimer = () => {
+      if (!clockTimer) return;
+      clearInterval(clockTimer);
+      clockTimer = null;
+    };
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stopTimer();
+      } else {
+        startTimer();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    startTimer();
   }
 
   startClock();
