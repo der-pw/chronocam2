@@ -11,8 +11,12 @@
 ## Browser Load
 - 1s clock updates in inactive tabs can be throttled via `visibilitychange`.
 
-## Server Load
- 
-
 ## Healthcheck
 - Expose healthcheck status on UI more explicitly if users want to distinguish reachability vs snapshot failures.
+
+## Auth / Security
+- Add optional API token support (e.g., header-based token for non-UI clients).
+- [x] Store access passwords as hashes instead of plaintext (bcrypt).
+- [x] Add rate limiting / login throttling for `/login` (simple in-memory).
+- [ ] Set and document `CHRONOCAM_SESSION_SECRET` for stable sessions.
+- Ensure HTTPS is used in production (reverse proxy guidance).

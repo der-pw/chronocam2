@@ -7,6 +7,11 @@ from pathlib import Path
 import asyncio
 import json
 from datetime import datetime
+import os
+import secrets
+from time import monotonic
+import hashlib
+import bcrypt
 
 from app.config_manager import load_config, save_config, resolve_save_dir
 from app.models import ConfigModel
@@ -25,6 +30,7 @@ from app.runtime_state import (
     set_image_stats,
     get_image_stats,
 )
+from starlette.middleware.sessions import SessionMiddleware
 
 # === FastAPI App ===
 app = FastAPI()
@@ -37,21 +43,157 @@ app.mount(
 )
 
 # === Templates ===
-APP_VERSION = "2.2.4"
+APP_VERSION = "2.3.0"
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["app_version"] = APP_VERSION
 
 
+def _normalize_password(pwd: str) -> bytes:
+    """Normalize password for bcrypt's 72-byte limit."""
+    raw = (pwd or "").encode("utf-8")
+    if len(raw) <= 72:
+        return raw
+    # For very long inputs, hash first to avoid bcrypt length errors.
+    return hashlib.sha256(raw).hexdigest().encode("ascii")
+
+
+def _hash_password(pwd: str) -> str:
+    return bcrypt.hashpw(_normalize_password(pwd), bcrypt.gensalt()).decode("utf-8")
+
+
+def _verify_password(pwd: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(_normalize_password(pwd), (hashed or "").encode("utf-8"))
+    except Exception:
+        return False
+
+# === Login throttling (simple in-memory protection) ===
+LOGIN_WINDOW_SEC = 300
+LOGIN_MAX_ATTEMPTS = 5
+LOGIN_BLOCK_SEC = 60
+_login_state: dict[str, dict[str, float | list[float]]] = {}
+
+
+def _client_ip(request: Request) -> str:
+    """Best-effort client IP, considering common reverse proxy headers."""
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        # First hop is the originating client in most proxy setups.
+        return forwarded_for.split(",")[0].strip()
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+    return (request.client.host if request.client else "unknown").strip()
+
+
+def _prune_attempts(attempts: list[float], now: float) -> list[float]:
+    cutoff = now - LOGIN_WINDOW_SEC
+    return [ts for ts in attempts if ts >= cutoff]
+
+
+def _is_blocked(ip: str) -> tuple[bool, int]:
+    now = monotonic()
+    state = _login_state.get(ip)
+    if not state:
+        return False, 0
+    blocked_until = float(state.get("blocked_until", 0.0))
+    if blocked_until > now:
+        remaining = max(1, int(blocked_until - now))
+        return True, remaining
+    # Clear stale block markers.
+    if blocked_until:
+        state["blocked_until"] = 0.0
+    attempts = _prune_attempts(list(state.get("attempts", [])), now)
+    state["attempts"] = attempts
+    return False, 0
+
+
+def _register_failure(ip: str) -> None:
+    now = monotonic()
+    state = _login_state.setdefault(ip, {"attempts": [], "blocked_until": 0.0})
+    attempts = _prune_attempts(list(state.get("attempts", [])), now)
+    attempts.append(now)
+    state["attempts"] = attempts
+    if len(attempts) >= LOGIN_MAX_ATTEMPTS:
+        state["blocked_until"] = now + LOGIN_BLOCK_SEC
+
+
+def _register_success(ip: str) -> None:
+    if ip in _login_state:
+        _login_state.pop(ip, None)
+
+
+async def _get_access_password_state() -> tuple[str | None, str | None]:
+    """Return (hash, plaintext) and migrate plaintext to hash when possible."""
+    async with cfg_lock:
+        local_cfg = cfg
+        pwd_hash = getattr(local_cfg, "access_password_hash", None)
+        pwd_plain = (getattr(local_cfg, "access_password", None) or "").strip() or None
+        if pwd_plain and not pwd_hash:
+            try:
+                local_cfg.access_password_hash = _hash_password(pwd_plain)
+                local_cfg.access_password = ""
+                save_config(local_cfg)
+                pwd_hash = local_cfg.access_password_hash
+                pwd_plain = None
+                log("info", "Migrated access password to hash.")
+            except Exception as err:
+                log("warn", f"Could not migrate access password to hash: {err}")
+        return pwd_hash, pwd_plain
+
+
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    # Allow static assets without auth to avoid broken CSS/JS before login.
+    if request.url.path.startswith("/static"):
+        return await call_next(request)
+    if request.url.path in ("/login", "/logout"):
+        return await call_next(request)
+
+    password_hash, password_plain = await _get_access_password_state()
+    if not (password_hash or password_plain):
+        return await call_next(request)
+
+    if request.session.get("authenticated"):
+        return await call_next(request)
+
+    return RedirectResponse(url="/login", status_code=303)
+
+
+_session_secret_env = os.getenv("CHRONOCAM_SESSION_SECRET")
+_session_secret = _session_secret_env or secrets.token_urlsafe(32)
+if not _session_secret_env:
+    log("warn", "CHRONOCAM_SESSION_SECRET not set; using ephemeral secret.")
+_session_https_only = os.getenv("CHRONOCAM_SESSION_HTTPS_ONLY", "").lower() in ("1", "true", "yes")
+app.add_middleware(
+    SessionMiddleware,
+    secret_key=_session_secret,
+    same_site="lax",
+    https_only=_session_https_only,
+    max_age=60 * 60 * 24 * 7,
+)
+
+
 def _compute_image_stats(save_path: Path) -> tuple[int, str | None, str | None]:
     """Compute image count and last snapshot timestamps from disk."""
-    stats = get_image_stats()
-    if stats:
-        count = stats.get("count", 0)
-        last_snapshot_ts = stats.get("last_snapshot")
-        last_snapshot_full = stats.get("last_snapshot_full")
+    count = 0
+    last_snapshot_ts = None
+    last_snapshot_full = None
+    latest_mtime = None
+    allowed_suffixes = ('.jpg', '.jpeg', '.png')
+    if save_path.exists():
+        for f in save_path.iterdir():
+            if f.is_file() and f.suffix.lower() in allowed_suffixes:
+                count += 1
+                mtime = f.stat().st_mtime
+                if latest_mtime is None or mtime > latest_mtime:
+                    latest_mtime = mtime
+        if latest_mtime:
+            latest_dt = datetime.fromtimestamp(latest_mtime)
+            last_snapshot_ts = latest_dt.strftime("%H:%M:%S")
+            last_snapshot_full = latest_dt.strftime("%d.%m.%y %H:%M")
     else:
-        count, last_snapshot_ts, last_snapshot_full = _compute_image_stats(save_path)
-        set_image_stats(count, last_snapshot_ts, last_snapshot_full)
+        log("warn", f"Save path does not exist: {save_path}")
     return count, last_snapshot_ts, last_snapshot_full
 
 # === SSE: server-sent events for live updates ===
@@ -71,6 +213,102 @@ async def sse_events():
             raise
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
+
+
+# === Auth: login/logout ===
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request):
+    password_hash, password_plain = await _get_access_password_state()
+    if not (password_hash or password_plain):
+        return RedirectResponse(url="/", status_code=303)
+    ip = _client_ip(request)
+    blocked, remaining = _is_blocked(ip)
+    async with cfg_lock:
+        local_cfg = cfg
+    tr = i18n.load_translations(getattr(local_cfg, "language", "de"))
+    return templates.TemplateResponse(
+        "login.html",
+        {
+            "request": request,
+            "error": False,
+            "error_message": None,
+            "blocked": blocked,
+            "blocked_seconds": remaining,
+            "cfg": local_cfg,
+            "tr": tr,
+            "lang": getattr(local_cfg, "language", "de"),
+        }
+    )
+
+
+@app.post("/login", response_class=HTMLResponse)
+async def login_submit(request: Request, ACCESS_PASSWORD: str = Form("")):
+    password_hash, password_plain = await _get_access_password_state()
+    if not (password_hash or password_plain):
+        return RedirectResponse(url="/", status_code=303)
+
+    ip = _client_ip(request)
+    blocked, remaining = _is_blocked(ip)
+    async with cfg_lock:
+        local_cfg = cfg
+    tr = i18n.load_translations(getattr(local_cfg, "language", "de"))
+
+    if blocked:
+        return templates.TemplateResponse(
+            "login.html",
+            {
+                "request": request,
+                "error": True,
+                "error_message": tr.get("login_blocked", "Too many attempts. Try again later."),
+                "blocked": True,
+                "blocked_seconds": remaining,
+                "cfg": local_cfg,
+                "tr": tr,
+                "lang": getattr(local_cfg, "language", "de"),
+            },
+        )
+
+    authenticated = False
+    candidate = (ACCESS_PASSWORD or "").strip()
+    try:
+        if password_hash:
+            authenticated = _verify_password(candidate, password_hash)
+        elif password_plain:
+            authenticated = secrets.compare_digest(candidate, password_plain)
+    except Exception as err:
+        log("warn", f"Password verification failed: {err}")
+        authenticated = False
+
+    if authenticated:
+        request.session["authenticated"] = True
+        _register_success(ip)
+        return RedirectResponse(url="/", status_code=303)
+
+    _register_failure(ip)
+    blocked, remaining = _is_blocked(ip)
+    return templates.TemplateResponse(
+        "login.html",
+        {
+            "request": request,
+            "error": True,
+            "error_message": (
+                tr.get("login_blocked", "Too many attempts. Try again later.")
+                if blocked
+                else tr.get("login_error", "Wrong password")
+            ),
+            "blocked": blocked,
+            "blocked_seconds": remaining,
+            "cfg": local_cfg,
+            "tr": tr,
+            "lang": getattr(local_cfg, "language", "de"),
+        }
+    )
+
+
+@app.get("/logout")
+async def logout(request: Request):
+    request.session.clear()
+    return RedirectResponse(url="/login", status_code=303)
 
 
 # === Index page ===
@@ -125,6 +363,8 @@ async def update_settings(
     request: Request,
     CAM_URL: str = Form(...),
     INSTANCE_NAME: str = Form(""),
+    ACCESS_PASSWORD: str = Form(""),
+    ACCESS_PASSWORD_ENABLE: str = Form(None),
     INTERVAL_SECONDS: int = Form(...),
     SAVE_PATH: str = Form(...),
     AUTH_TYPE: str = Form("none"),
@@ -143,6 +383,14 @@ async def update_settings(
     async with cfg_lock:
         cfg.cam_url = CAM_URL
         cfg.instance_name = INSTANCE_NAME.strip() or None
+        enable_access_password = ACCESS_PASSWORD_ENABLE is not None
+        new_access_password = (ACCESS_PASSWORD or "").strip()
+        if not enable_access_password:
+            cfg.access_password_hash = None
+            cfg.access_password = ""
+        elif new_access_password:
+            cfg.access_password_hash = _hash_password(new_access_password)
+            cfg.access_password = ""
         cfg.interval_seconds = INTERVAL_SECONDS
         cfg.save_path = SAVE_PATH
         cfg.auth_type = AUTH_TYPE

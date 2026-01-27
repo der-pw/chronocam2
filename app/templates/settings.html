@@ -16,7 +16,11 @@ endblock %}
 
 <form id="settings-form" method="post" action="/update" class="mt-3"
       data-save-success="{{ tr.get('settings_saved', 'Einstellungen gespeichert') if tr else 'Einstellungen gespeichert' }}"
-      data-save-error="{{ tr.get('settings_save_failed', 'Speichern fehlgeschlagen') if tr else 'Speichern fehlgeschlagen' }}">
+      data-save-error="{{ tr.get('settings_save_failed', 'Speichern fehlgeschlagen') if tr else 'Speichern fehlgeschlagen' }}"
+      data-geo-success="{{ tr.get('geo_success', 'Koordinaten aus Browserstandort übernommen') if tr else 'Koordinaten aus Browserstandort übernommen' }}"
+      data-geo-unsupported="{{ tr.get('geo_unsupported', 'Browser-Geolokalisierung wird nicht unterstützt') if tr else 'Browser-Geolokalisierung wird nicht unterstützt' }}"
+      data-geo-denied="{{ tr.get('geo_denied', 'Standortfreigabe verweigert') if tr else 'Standortfreigabe verweigert' }}"
+      data-geo-error="{{ tr.get('geo_error', 'Standort konnte nicht ermittelt werden') if tr else 'Standort konnte nicht ermittelt werden' }}">
   <!-- Main -->
   <h5 class="mb-2">{{ tr["main"] if tr else "Main" }}</h5>
   <div class="row g-3 mb-3">
@@ -32,6 +36,27 @@ endblock %}
           code }}</option>
         {% endfor %}
       </select>
+    </div>
+    <div class="col-md-7">
+      <label class="form-label">{{ tr.get("access_password", "Access Password") if tr else "Access Password" }}</label>
+      {% set access_password_set = ((cfg.access_password_hash if cfg.access_password_hash is defined else None) or (cfg.access_password or '')) %}
+      <input type="password" class="form-control" name="ACCESS_PASSWORD" value="">
+      <div class="form-text">{{ tr.get("access_password_help", "Leave empty to keep current password") if tr else "Leave empty to keep current password" }}</div>
+      <div class="form-text">{{ tr.get("access_password_note", "The current password is not shown for security reasons") if tr else "The current password is not shown for security reasons" }}</div>
+      {% if not access_password_set %}
+      <div class="form-text">{{ tr.get("access_password_not_set", "No access password is set") if tr else "No access password is set" }}</div>
+      {% endif %}
+      <div class="form-check form-switch mt-2">
+        <input
+          class="form-check-input"
+          type="checkbox"
+          id="access-password-enable"
+          name="ACCESS_PASSWORD_ENABLE"
+          value="true"
+          {% if access_password_set %}checked{% endif %}
+        >
+        <label class="form-check-label" for="access-password-enable">{{ tr.get("access_password_enable", "Enable login protection") if tr else "Enable login protection" }}</label>
+      </div>
     </div>
   </div>
   <hr class="mx-auto">
@@ -145,12 +170,6 @@ endblock %}
       %}checked{% endif %}>
     <label class="form-check-label" for="use-astral">{{ tr["use_astral"] if tr else "Use sunrise/sunset" }}</label>
   </div>
-  <div class="mb-2">
-    <a href="https://www.latlong.net/convert-address-to-lat-long.html" target="_blank" rel="noopener noreferrer">
-      <i class="fa-solid fw-7 fa-location-dot me-1"></i>{{ tr['coords_help'] if tr else 'Get coordinates from address'
-      }}
-    </a>
-  </div>
   <div class="row g-3 mb-3">
     <div class="col-md-4">
       <label class="form-label">{{ tr["latitude"] if tr else "Latitude" }}</label>
@@ -164,6 +183,15 @@ endblock %}
       <label class="form-label">{{ tr["timezone"] if tr else "Time zone" }}</label>
       <input class="form-control" name="CITY_TZ" value="{{ cfg.city_tz }}">
     </div>
+  </div>
+  <div class="mb-2 d-flex flex-wrap gap-3 align-items-center">
+    <button class="btn btn-outline-secondary btn-sm" type="button" id="geo-browser-btn">
+      <i class="fa-solid fa-location-crosshairs me-1"></i>{{ tr.get('coords_browser', 'Browserstandort übernehmen') if tr else 'Browserstandort übernehmen' }}
+    </button>
+    <a href="https://www.latlong.net/convert-address-to-lat-long.html" target="_blank" rel="noopener noreferrer">
+      <i class="fa-solid fw-7 fa-location-dot me-1"></i>{{ tr['coords_help'] if tr else 'Get coordinates from address'
+      }}
+    </a>
   </div>
   <hr class="mx-auto">
   <div class="mt-4 text-end">

@@ -7,6 +7,11 @@ class ConfigModel(BaseModel):
     """Global app configuration (replaces the former INI file)."""
     instance_name: Optional[str] = Field(None, description="Optional instance name override")
     cam_url: str = Field("", description="Webcam snapshot URL")
+    access_password: Optional[str] = Field(
+        None,
+        description="Legacy plaintext password for UI/API access (migrated to hash when possible)",
+    )
+    access_password_hash: Optional[str] = Field(None, description="Hashed password for UI/API access")
     username: Optional[str] = Field(None, description="Camera username")
     password: Optional[str] = Field(None, description="Camera password")
     auth_type: str = Field("none", description="Auth type: none/basic/digest")
