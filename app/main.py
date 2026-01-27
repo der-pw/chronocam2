@@ -43,7 +43,7 @@ app.mount(
 )
 
 # === Templates ===
-APP_VERSION = "2.2.4"
+APP_VERSION = "2.3.0"
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["app_version"] = APP_VERSION
 
