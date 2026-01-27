@@ -8,4 +8,5 @@ APScheduler>=3.10
 astral>=2.2
 aiofiles>=23.0
 itsdangerous>=2.0
-tzdata>=2024.1; sys_platform == "win32"
+tzdata>=2024.1
+bcrypt>=5.0.0

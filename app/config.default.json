@@ -2,6 +2,7 @@
   "cam_url": "https://raw.githubusercontent.com/der-pw/chronocam2/refs/heads/main/app/static/img/last.jpg",
   "instance_name": null,
   "access_password": "",
+  "access_password_hash": null,
   "username": "",
   "password": "",
   "auth_type": "none",

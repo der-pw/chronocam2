@@ -16,7 +16,7 @@
 
 ## Auth / Security
 - Add optional API token support (e.g., header-based token for non-UI clients).
-- Store access passwords as hashes instead of plaintext (e.g., bcrypt/argon2).
-- Add rate limiting / login throttling for `/login`.
-- Document and require `CHRONOCAM_SESSION_SECRET` for stable sessions.
+- [x] Store access passwords as hashes instead of plaintext (bcrypt).
+- [x] Add rate limiting / login throttling for `/login` (simple in-memory).
+- [ ] Set and document `CHRONOCAM_SESSION_SECRET` for stable sessions.
 - Ensure HTTPS is used in production (reverse proxy guidance).

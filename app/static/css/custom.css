@@ -142,3 +142,8 @@
   max-height: 95vh !important;
   max-width: 95vw;
 }
+
+/* Reserve space for settings alerts to avoid layout jumps */
+#settings-status {
+  min-height: 3.25rem;
+}
